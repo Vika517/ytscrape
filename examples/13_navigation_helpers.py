@@ -16,7 +16,9 @@ def run_sync() -> None:
     with YouTube() as yt:
         video = next(iter(yt.search("lofi hip hop", filter=SearchFilter.VIDEOS)))
         details = video.details()
-        print(f"{details.title} — {details.views} views, uploaded {details.uploaded_at}")
+        print(
+            f"{details.title} — {details.views} views, uploaded {details.uploaded_at}"
+        )
         for comment in video.comments(max_results=3):
             print(f"  💬 {(comment.text or '')[:70]}")
         channel = video.channel_details()
