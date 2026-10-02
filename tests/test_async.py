@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -343,5 +344,23 @@ class TestAsyncSearchPaging:
             assert parsed[0]["video_id"] == "v1"
             csv_text = await results.to_csv()
             assert "video_id" in csv_text
+
+        _run(body())
+
+
+class TestAsyncNavigation:
+    def test_bound_helpers_are_awaitable(self) -> None:
+        async def body() -> None:
+            client = FakeAsyncClient()
+            yt = AsyncYouTube(client=client)  # type: ignore[arg-type]
+            results = await yt.search("python")
+            video = await anext(aiter(results))
+            video = replace(video, video_id="dQw4w9WgXcQ")
+            details = await video.details()
+            assert isinstance(details, VideoDetails)
+            channel = await yt.channel("UCuAXFkgsw1L7xaCfnd5JJOw")
+            videos = await channel.videos(max_results=5)
+            assert [v async for v in videos] == []
+            assert client.browse_calls[-1]["params"] is not None
 
         _run(body())

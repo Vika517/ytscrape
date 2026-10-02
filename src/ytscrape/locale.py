@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 import pycountry
 
-__all__ = ["Language", "Country", "Locale"]
+__all__ = ["Country", "Language", "Locale"]
 
 _DEFAULT_LANGUAGE = "en"
 _DEFAULT_COUNTRY = "US"
@@ -90,7 +90,7 @@ class Language:
         Accepts an existing :class:`Language` (returned as-is) or a raw ISO
         639-1 code, which is validated via ``pycountry``.
         """
-        if isinstance(value, cls):
+        if isinstance(value, Language):
             return value
         return cls(value)
 
@@ -125,7 +125,7 @@ class Country:
         Accepts an existing :class:`Country` (returned as-is) or a raw ISO
         3166-1 alpha-2 code, which is validated via ``pycountry``.
         """
-        if isinstance(value, cls):
+        if isinstance(value, Country):
             return value
         return cls(value)
 
@@ -157,12 +157,10 @@ class Locale:
         country: Country | str | None = None,
     ) -> Locale:
         """Build a :class:`Locale`, falling back to defaults for missing parts."""
-        kwargs: dict[str, Language | Country] = {}
-        if language is not None:
-            kwargs["language"] = Language.of(language)
-        if country is not None:
-            kwargs["country"] = Country.of(country)
-        return cls(**kwargs)
+        return cls(
+            language=Language() if language is None else Language.of(language),
+            country=Country() if country is None else Country.of(country),
+        )
 
     @property
     def accept_language(self) -> str:

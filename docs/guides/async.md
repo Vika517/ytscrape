@@ -1,3 +1,7 @@
+---
+description: "Install the optional `ytscrape[async]` extra, scrape with `AsyncYouTube`, and control concurrency, retries, and backoff for parallel YouTube requests."
+---
+
 # Use the async API with AsyncYouTube and httpx
 
 > Install the optional `ytscrape[async]` extra, scrape with `AsyncYouTube`, and control concurrency, retries, and backoff for parallel YouTube requests.

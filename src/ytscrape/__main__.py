@@ -14,7 +14,6 @@ import sys
 from . import YouTube, __version__
 from . import _cli as cli
 from .exceptions import YtScraperError
-from .export import dump_csv, dump_json, dumps_csv, dumps_json
 from .filters import CommentSort, SearchFilter
 
 
@@ -166,166 +165,13 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _use_table(args: argparse.Namespace) -> bool:
-    return args.output_format == "table"
-
-
-def _colour(args: argparse.Namespace) -> bool:
-    force = False if args.no_color else None
-    return cli.colour_enabled(force=force)
-
-
-def _spinner_on(args: argparse.Namespace) -> bool:
-    if args.output_format == "plain":
-        return False
-    return bool(getattr(sys.stderr, "isatty", lambda: False)())
-
-
-def _emit_export(args: argparse.Namespace, payload: object) -> None:
-    dest = args.output
-    if args.output_format == "json":
-        if dest:
-            dump_json(payload, dest)
-        else:
-            sys.stdout.write(dumps_json(payload))
-        return
-    if dest:
-        dump_csv(payload, dest)
-    else:
-        sys.stdout.write(dumps_csv(payload))
-
-
-def _print_banner(args: argparse.Namespace) -> None:
-    if args.no_logo or not _use_table(args):
-        return
-    print(cli.logo(enabled=_colour(args), version=__version__))
-
-
 def main(argv: list[str] | None = None) -> int:
     """Entry point for the console script and ``python -m ytscrape``."""
     args = _build_parser().parse_args(argv)
-    pretty = _use_table(args)
-    color = _colour(args)
-
     try:
         with YouTube(language=args.language, region=args.region) as yt:
-            _print_banner(args)
-            if args.command == "search":
-                with cli.Spinner("searching…", enabled=_spinner_on(args)):
-                    results = list(
-                        yt.search(
-                            args.query,
-                            filter=args.filter,
-                            max_results=args.max_results,
-                        )
-                    )
-                if args.output_format in {"json", "csv"}:
-                    _emit_export(args, results)
-                elif pretty:
-                    headers, rows = cli.search_rows(results)
-                    print(cli.render_table(headers, rows, enabled=color))
-                else:
-                    for item in results:
-                        print(cli.plain_search_line(item))
-            elif args.command == "video":
-                with cli.Spinner("fetching video…", enabled=_spinner_on(args)):
-                    details = yt.video(args.video)
-                if args.output_format in {"json", "csv"}:
-                    _emit_export(args, details)
-                elif pretty:
-                    print(cli.render_kv(cli.video_pairs(details), enabled=color))
-                else:
-                    print(f"Title:     {details.title}")
-                    print(f"Channel:   {details.channel}")
-                    print(f"Views:     {details.views}")
-                    print(f"Length:    {details.length_seconds}s")
-                    print(f"Published: {details.published}")
-                    print(f"Category:  {details.category}")
-                    print(f"Live:      {details.is_live}")
-                    print(f"URL:       {details.url}")
-            elif args.command == "channel":
-                with cli.Spinner("fetching channel…", enabled=_spinner_on(args)):
-                    details = yt.channel(args.channel)
-                if args.output_format in {"json", "csv"}:
-                    _emit_export(args, details)
-                elif pretty:
-                    print(cli.render_kv(cli.channel_pairs(details), enabled=color))
-                else:
-                    print(f"Title:        {details.title}")
-                    print(f"Handle:       {details.handle}")
-                    print(f"Subscribers:  {details.subscribers}")
-                    print(f"Videos:       {details.video_count}")
-                    print(f"Views:        {details.view_count}")
-                    print(f"Country:      {details.country}")
-                    print(f"Joined:       {details.joined_date}")
-                    print(f"Photo:        {details.photo}")
-                    print(f"Banner:       {details.banner}")
-                    print(f"Channel id:   {details.channel_id}")
-                    print(f"URL:          {details.url}")
-                    if details.vanity_url:
-                        print(f"Vanity URL:   {details.vanity_url}")
-                    if details.links:
-                        print(f"Links:        {details.links}")
-            elif args.command == "comments":
-                max_results = args.max_results or None
-                with cli.Spinner("loading comments…", enabled=_spinner_on(args)):
-                    comments = list(
-                        yt.comments(
-                            args.video,
-                            max_results=max_results,
-                            include_replies=args.include_replies,
-                            sort=args.sort,
-                        )
-                    )
-                if args.output_format in {"json", "csv"}:
-                    _emit_export(args, comments)
-                elif pretty:
-                    print(cli.comment_table(comments, enabled=color))
-                else:
-                    for comment in comments:
-                        prefix = "  \u21b3 " if comment.is_reply else ""
-                        print(f"{prefix}{comment.author}: {comment.text}")
-            elif args.command == "transcript":
-                if args.list_only:
-                    spin = cli.Spinner(
-                        "listing transcripts…",
-                        enabled=_spinner_on(args),
-                    )
-                    with spin:
-                        tracks = yt.transcripts(args.video)
-                    if args.output_format in {"json", "csv"}:
-                        _emit_export(args, list(tracks))
-                    elif pretty:
-                        print(cli.transcript_list_table(tracks, enabled=color))
-                    else:
-                        print(tracks)
-                else:
-                    languages = tuple(args.languages) if args.languages else ("en",)
-                    spin = cli.Spinner(
-                        "fetching transcript…",
-                        enabled=_spinner_on(args),
-                    )
-                    with spin:
-                        result = yt.transcript(
-                            args.video,
-                            languages=languages,
-                            preserve_formatting=args.preserve_formatting,
-                        )
-                    if args.output_format in {"json", "csv"}:
-                        _emit_export(args, result)
-                    elif pretty:
-                        print(cli.transcript_table(result, enabled=color))
-                    else:
-                        print(
-                            f"# {result.video_id} | {result.language_code} "
-                            f"| generated={result.is_generated} "
-                            f"| snippets={len(result)}"
-                        )
-                        for snippet in result:
-                            print(
-                                f"[{snippet.start:8.2f} +{snippet.duration:5.2f}] "
-                                f"{snippet.text}"
-                            )
+            cli.print_banner(args, version=__version__)
+            cli.COMMANDS[args.command](yt, args)
     except YtScraperError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

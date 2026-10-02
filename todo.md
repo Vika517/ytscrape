@@ -6,7 +6,7 @@ What's left in **ytscrape**. Rough priority order within each section.
 
 ## InnerTube coverage
 
-- [ ] Channel tabs: videos, shorts, live, playlists
+- [ ] Channel tabs: videos, shorts, live, playlists *(videos tab done — `channel_videos()`)*
 - [ ] Playlist items (`yt.playlist()`)
 - [ ] Related videos
 - [ ] Trending / home feed
@@ -17,23 +17,23 @@ What's left in **ytscrape**. Rough priority order within each section.
 
 ## Reliability
 
-- [ ] Built-in retries + exponential backoff on **sync** `InnerTubeClient` (429 / 5xx)
+- [x] Built-in retries + exponential backoff on **sync** `InnerTubeClient` (429 / 5xx)
   *(async client already has retries / backoff / concurrency)*
-- [ ] Rate limiting option (sync + shared policy)
-- [ ] Cached InnerTube context with TTL
-- [ ] Detect captcha / consent / bot checks
-- [ ] Richer exception hierarchy beyond `ParseError`
+- [x] Rate limiting option (sync + shared policy)
+- [x] Cached InnerTube context with TTL
+- [x] Detect captcha / consent / bot checks
+- [x] Richer exception hierarchy beyond `ParseError`
   *(transcript errors already exist: `TranscriptsDisabled`, `NoTranscriptFound`)*
-- [ ] Optional request logging / debug mode
+- [x] Optional request logging / debug mode
 
 ## Models
 
-- [ ] Numeric fields where search/list APIs still return strings
+- [x] Numeric fields where search/list APIs still return strings
   *(e.g. `Video.views`, `Channel.subscribers`; `VideoDetails.views` is already `int`)*
-- [ ] Parsed `published_at: datetime` where available
-- [ ] Navigation helpers: `video.comments()`, `video.channel()`, `channel.videos()`
+- [x] Parsed `published_at: datetime` where available
+- [x] Navigation helpers: `video.comments()`, `video.channel()`, `channel.videos()`
 - [x] `.to_dict()` / `.to_json()` (or shared serializers)
-- [ ] Thumbnails as a list of sizes (not only largest URL)
+- [x] Thumbnails as a list of sizes (not only largest URL)
 
 ## CLI
 
@@ -48,13 +48,13 @@ What's left in **ytscrape**. Rough priority order within each section.
 
 ## Tests & CI
 
-- [ ] 🔥 Run `pytest` in CI (today only pre-commit)
-- [ ] Python 3.10–3.14 matrix
-- [ ] Coverage + Codecov badge
-- [ ] `mypy` / typecheck in CI (when ready)
-- [ ] Network-marked live tests (nightly / manual)
+- [x] 🔥 Run `pytest` in CI (today only pre-commit)
+- [x] Python 3.10–3.14 matrix
+- [x] Coverage + Codecov badge
+- [x] `mypy` / typecheck in CI (when ready)
+- [x] Network-marked live tests (nightly / manual)
 - [ ] Snapshot fixtures of real InnerTube responses
-- [ ] Dependabot / scheduled `pre-commit autoupdate`
+- [x] Dependabot / scheduled `pre-commit autoupdate`
 
 ## Docs
 - [x] Examples / guide for CSV/JSON export

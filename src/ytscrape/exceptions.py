@@ -25,12 +25,77 @@ class YtScraperError(Exception):
     """Base exception for all errors raised by ytscrape."""
 
 
+#: Preferred name of the base exception (``YtScraperError`` kept as alias).
+YtScrapeError = YtScraperError
+
+
 class ContextExtractionError(YtScraperError):
     """Raised when the InnerTube context cannot be extracted from YouTube."""
 
 
 class RequestError(YtScraperError):
-    """Raised when an HTTP request to YouTube fails."""
+    """Raised when an HTTP request to YouTube fails.
+
+    Attributes:
+        status_code: HTTP status of the failed response, if any.
+        url: The requested URL, if known.
+    """
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        status_code: int | None = None,
+        url: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.url = url
+
+
+class RateLimited(RequestError):
+    """Raised when YouTube keeps answering HTTP 429 after all retries.
+
+    Attributes:
+        retry_after: Seconds suggested by the ``Retry-After`` header, if any.
+    """
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        status_code: int | None = 429,
+        url: str | None = None,
+        retry_after: float | None = None,
+    ) -> None:
+        super().__init__(message, status_code=status_code, url=url)
+        self.retry_after = retry_after
+
+
+class BotDetected(RequestError):
+    """Raised when YouTube serves a captcha / "confirm you're not a bot" page."""
+
+
+#: Alias of :class:`BotDetected`.
+CaptchaRequired = BotDetected
+
+
+class ConsentRequired(RequestError):
+    """Raised when YouTube redirects to the cookie consent wall."""
+
+
+class VideoUnavailable(YtScraperError):
+    """Raised when a video is unavailable (private, removed, blocked...)."""
+
+    def __init__(self, video_id: str, reason: str | None = None) -> None:
+        self.video_id = video_id
+        self.reason = reason
+        msg = f"Video {video_id!r} is unavailable"
+        super().__init__(f"{msg}: {reason}" if reason else f"{msg}.")
+
+
+class AgeRestricted(VideoUnavailable):
+    """Raised when a video requires sign-in to confirm the viewer's age."""
 
 
 class ParseError(YtScraperError):

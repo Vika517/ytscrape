@@ -6,12 +6,13 @@ import re
 from urllib.parse import parse_qs, urlparse
 
 from . import parsing
-from .client import InnerTubeClient
+from .client import InnerTubeClient, RateLimiter, RetryPolicy, check_playability
+from .context import ContextCache
 from .exceptions import ParseError
 from .filters import CommentSort, SearchFilter
 from .locale import Country, Language, Locale
 from .models import ChannelDetails, VideoDetails, _about_continuation_token
-from .results import CommentThread, SearchResults
+from .results import ChannelVideos, CommentThread, SearchResults
 from .transcripts import (
     Transcript,
     TranscriptList,
@@ -75,12 +76,20 @@ class YouTube:
         language: Language | str = "en",
         region: Country | str = "US",
         timeout: float = 30.0,
+        retry: RetryPolicy | None = None,
+        min_interval: float = 0.0,
+        rate_limiter: RateLimiter | None = None,
+        context_cache: ContextCache | bool | None = None,
     ) -> None:
         self._client = client or InnerTubeClient(
             locale=locale,
             language=language,
             region=region,
             timeout=timeout,
+            retry=retry,
+            min_interval=min_interval,
+            rate_limiter=rate_limiter,
+            context_cache=context_cache,
         )
 
     @property
@@ -113,7 +122,9 @@ class YouTube:
         """
         search_filter = SearchFilter.from_value(filter)
         first_page = self._client.search(query, params=search_filter.params)
-        return SearchResults(self._client, first_page, max_results=max_results)
+        return SearchResults(
+            self._client, first_page, max_results=max_results, youtube=self
+        )
 
     def transcript(
         self,
@@ -162,7 +173,8 @@ class YouTube:
         """
         video_id = self._normalize_video_id(video)
         response = self._client.player(video_id)
-        return VideoDetails.from_player_response(response)
+        check_playability(response, video_id)
+        return VideoDetails.from_player_response(response).bind(self)
 
     def channel(self, channel: str) -> ChannelDetails:
         """Fetch detailed metadata for a single channel.
@@ -181,7 +193,28 @@ class YouTube:
         details = ChannelDetails.from_browse_response(response, about=about_response)
         if not details.channel_id:
             raise ParseError(f"Could not parse channel metadata for {channel_id!r}.")
-        return details
+        return details.bind(self)
+
+    def channel_videos(
+        self, channel: str, *, max_results: int | None = None
+    ) -> ChannelVideos:
+        """List a channel's uploads (Videos tab) as a lazy paginated iterable.
+
+        Args:
+            channel: A channel id, ``@handle`` or channel URL.
+            max_results: Optional cap on the number of videos yielded.
+        """
+        channel_id = self._normalize_channel_id(channel)
+        first_page = self._client.browse(
+            channel_id, params=parsing.CHANNEL_VIDEOS_PARAMS
+        )
+        return ChannelVideos(
+            self._client,
+            channel_id,
+            first_page,
+            max_results=max_results,
+            youtube=self,
+        )
 
     def comments(
         self,

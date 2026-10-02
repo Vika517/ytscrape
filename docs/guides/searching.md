@@ -1,3 +1,7 @@
+---
+description: "Search YouTube for videos, channels, playlists, Shorts, and movies using SearchFilter — no API key, no quota, fully typed results."
+---
+
 # Search YouTube for Videos, Channels, and Playlists
 
 > Search YouTube for videos, channels, playlists, Shorts, and movies using SearchFilter — no API key, no quota, fully typed results.
@@ -120,8 +124,11 @@ Each yielded item is a frozen, fully typed dataclass. The concrete type depends 
 | `channel`    | `str \| None` | Display name of the uploading channel                                 |
 | `channel_id` | `str \| None` | `UC…` channel id                                                      |
 | `duration`   | `str \| None` | Formatted duration string (e.g. `"10:32"`)                            |
-| `views`      | `str \| None` | View count as rendered by YouTube (e.g. `"1.2M views"`)               |
-| `published`  | `str \| None` | Relative publish time (e.g. `"3 days ago"`)                           |
+| `views`      | `int \| None` | View count as an integer (e.g. `1200000`)                             |
+| `views_text` | `str \| None` | View count as rendered by YouTube (e.g. `"1.2M views"`)               |
+| `published_text` | `str \| None` | Relative publish time (e.g. `"3 days ago"`)                       |
+| `published_at` | `datetime \| None` | Approximate UTC datetime derived from `published_text` (English) |
+| `thumbnails` | `tuple[Thumbnail, ...]` | All thumbnail sizes (`url`, `width`, `height`)                  |
 | `thumbnail`  | `str \| None` | URL of the largest available thumbnail                                |
 | `url`        | `str`         | Canonical `https://www.youtube.com/watch?v=…` URL (computed property) |
 
@@ -132,8 +139,9 @@ Each yielded item is a frozen, fully typed dataclass. The concrete type depends 
 | `channel_id`  | `str`         | `UC…` channel id                                                        |
 | `title`       | `str \| None` | Channel display name                                                    |
 | `handle`      | `str \| None` | `@handle` when available                                                |
-| `subscribers` | `str \| None` | Subscriber count as rendered by YouTube (e.g. `"1.23M subscribers"`)    |
-| `video_count` | `str \| None` | Public video count                                                      |
+| `subscribers` | `int \| None` | Subscriber count as an integer                                          |
+| `subscribers_text` | `str \| None` | As rendered by YouTube (e.g. `"1.23M subscribers"`)               |
+| `video_count` | `int \| None` | Public video count (raw text in `video_count_text`)                     |
 | `thumbnail`   | `str \| None` | URL of the channel avatar                                               |
 | `url`         | `str`         | Canonical `https://www.youtube.com/channel/UC…` URL (computed property) |
 
@@ -144,7 +152,7 @@ Each yielded item is a frozen, fully typed dataclass. The concrete type depends 
 | `playlist_id` | `str`         | Unique playlist id                                                          |
 | `title`       | `str \| None` | Playlist title                                                              |
 | `channel`     | `str \| None` | Name of the channel that owns the playlist                                  |
-| `video_count` | `str \| None` | Number of videos in the playlist                                            |
+| `video_count` | `int \| None` | Number of videos in the playlist (raw text in `video_count_text`)           |
 | `thumbnail`   | `str \| None` | URL of the playlist thumbnail                                               |
 | `url`         | `str`         | Canonical `https://www.youtube.com/playlist?list=…` URL (computed property) |
 

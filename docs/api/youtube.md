@@ -1,3 +1,7 @@
+---
+description: "Complete reference for the YouTube facade class — the primary entry point for searching, fetching videos, channels, comments, and transcripts."
+---
+
 # YouTube Class — ytscrape High-Level Scraping API Reference
 
 > Complete reference for the YouTube facade class — the primary entry point for searching, fetching videos, channels, comments, and transcripts.

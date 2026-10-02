@@ -1,3 +1,7 @@
+---
+description: "Complete reference for the ytscrape command-line interface — search, video, channel, comments, and transcript subcommands explained."
+---
+
 # ytscrape CLI: search, video, channel, comments, transcript
 
 > Complete reference for the ytscrape command-line interface — search, video, channel, comments, and transcript subcommands explained.

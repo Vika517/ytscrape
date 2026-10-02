@@ -2,7 +2,119 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
 from ytscrape import Channel, ChannelDetails, Comment, Playlist, Video, VideoDetails
+from ytscrape.models import (
+    Thumbnail,
+    UnboundModelError,
+    parse_count,
+    parse_date,
+    parse_relative_time,
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("1.2M views", 1_200_000),
+        ("1,234 views", 1234),
+        ("12K subscribers", 12_000),
+        ("4.53M subscribers", 4_530_000),
+        ("2.1B views", 2_100_000_000),
+        ("No views", 0),
+        ("42", 42),
+        ("", None),
+        (None, None),
+        ("views", None),
+    ],
+)
+def test_parse_count(text: str | None, expected: int | None) -> None:
+    assert parse_count(text) == expected
+
+
+def test_parse_relative_time() -> None:
+    now = datetime(2024, 1, 10, tzinfo=timezone.utc)
+    assert parse_relative_time("3 days ago", now=now) == now - timedelta(days=3)
+    assert parse_relative_time("Streamed 1 hour ago", now=now) == now - timedelta(
+        hours=1
+    )
+    assert parse_relative_time("2 years ago", now=now) == now - timedelta(days=730)
+    assert parse_relative_time("yesterday", now=now) is None
+    assert parse_relative_time(None) is None
+
+
+def test_parse_date() -> None:
+    assert parse_date("2009-10-24") == datetime(2009, 10, 24, tzinfo=timezone.utc)
+    parsed = parse_date("2009-10-24T23:57:33-07:00")
+    assert parsed is not None
+    assert parsed.utcoffset() == timedelta(hours=-7)
+    assert parse_date("2020-01-01T00:00:00Z") == datetime(
+        2020, 1, 1, tzinfo=timezone.utc
+    )
+    assert parse_date("garbage") is None
+    assert parse_date(None) is None
+
+
+def test_thumbnails_with_sizes() -> None:
+    video = Video.from_renderer(
+        {
+            "videoId": "v",
+            "thumbnail": {
+                "thumbnails": [
+                    {"url": "s", "width": 120, "height": 90},
+                    {"url": "l", "width": 640, "height": 480},
+                ]
+            },
+        }
+    )
+    assert video.thumbnails == (Thumbnail("s", 120, 90), Thumbnail("l", 640, 480))
+    assert video.thumbnail == "l"
+
+
+class _FakeYT:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple, dict]] = []
+
+    def __getattr__(self, name: str):
+        def method(*args, **kwargs):
+            self.calls.append((name, args, kwargs))
+            return name
+
+        return method
+
+
+class TestNavigation:
+    def test_unbound_raises(self) -> None:
+        with pytest.raises(UnboundModelError):
+            Video(video_id="v").comments()
+        with pytest.raises(UnboundModelError):
+            Channel(channel_id="UC1").videos()
+        with pytest.raises(UnboundModelError):
+            VideoDetails(video_id="v").channel_details()
+
+    def test_bound_helpers_delegate(self) -> None:
+        yt = _FakeYT()
+        video = Video(video_id="v", channel_id="UC1").bind(yt)
+        assert video.comments(max_results=5) == "comments"
+        assert video.details() == "video"
+        assert video.channel_details() == "channel"
+        assert Channel(channel_id="UC1").bind(yt).videos() == "channel_videos"
+        assert ChannelDetails(channel_id="UC1").bind(yt).videos() == "channel_videos"
+        assert yt.calls[0] == ("comments", ("v",), {"max_results": 5})
+        assert yt.calls[2] == ("channel", ("UC1",), {})
+
+    def test_binding_excluded_from_eq_repr_export(self) -> None:
+        yt = _FakeYT()
+        plain = Video(video_id="v")
+        bound = plain.bind(yt)
+        assert bound == plain
+        assert "_yt" not in repr(bound)
+        assert "_yt" not in bound.to_dict()
+        assert "_yt" not in bound.to_json()
+        assert "_yt" not in bound.to_csv()
 
 
 class TestVideoUrl:
@@ -45,8 +157,14 @@ class TestVideoFromRenderer:
         assert video.channel == "Cool Channel"
         assert video.channel_id == "UC12345"
         assert video.duration == "3:14"
-        assert video.views == "1,234 views"
-        assert video.published == "2 days ago"
+        assert video.views == 1234
+        assert video.views_text == "1,234 views"
+        assert video.published_text == "2 days ago"
+        assert video.published_at is not None
+        assert [t.url for t in video.thumbnails] == [
+            "http://small.jpg",
+            "http://large.jpg",
+        ]
         assert video.thumbnail == "http://large.jpg"
         assert video.description == "A short blurb"
 
@@ -83,9 +201,22 @@ class TestChannel:
         channel = Channel.from_renderer(renderer)
         assert channel.channel_id == "UC999"
         assert channel.title == "My Channel"
-        assert channel.subscribers == "100 videos"
-        assert channel.video_count == "100 videos"
+        assert channel.subscribers is None
+        assert channel.video_count == 100
+        assert channel.video_count_text == "100 videos"
         assert channel.thumbnail == "http://ch.jpg"
+
+    def test_from_modern_renderer(self) -> None:
+        channel = Channel.from_renderer(
+            {
+                "channelId": "UC1",
+                "subscriberCountText": {"simpleText": "@handle"},
+                "videoCountText": {"simpleText": "12K subscribers"},
+            }
+        )
+        assert channel.handle == "@handle"
+        assert channel.subscribers == 12_000
+        assert channel.subscribers_text == "12K subscribers"
 
 
 class TestPlaylist:
@@ -107,7 +238,8 @@ class TestPlaylist:
         assert playlist.playlist_id == "PL999"
         assert playlist.title == "Best Songs"
         assert playlist.channel == "Owner"
-        assert playlist.video_count == "42"
+        assert playlist.video_count == 42
+        assert playlist.video_count_text == "42"
         assert playlist.thumbnail == "http://pl.jpg"
 
 
@@ -156,7 +288,9 @@ class TestVideoDetails:
         assert details.is_live is True
         assert details.thumbnail == "http://t.jpg"
         assert details.published == "2009-10-25"
+        assert details.published_at == datetime(2009, 10, 25, tzinfo=timezone.utc)
         assert details.upload_date == "2009-10-24"
+        assert details.uploaded_at == datetime(2009, 10, 24, tzinfo=timezone.utc)
         assert details.category == "Music"
         assert details.owner_profile_url == "http://www.youtube.com/@author"
         assert details.embed_url == "https://www.youtube.com/embed/vid"
@@ -263,8 +397,10 @@ class TestChannelDetails:
         assert details.title == "Rick Astley"
         assert details.description == "Bio here"
         assert details.handle == "@RickAstleyYT"
-        assert details.subscribers == "4.53M subscribers"
-        assert details.video_count == "434 videos"
+        assert details.subscribers == 4_530_000
+        assert details.subscribers_text == "4.53M subscribers"
+        assert details.video_count == 434
+        assert details.video_count_text == "434 videos"
         assert details.keywords == ("Official", "rick astley", "meme")
         assert details.thumbnail == "http://avatar.jpg"
         assert details.photo == "http://avatar.jpg"
@@ -368,9 +504,12 @@ class TestChannelDetails:
         assert details.banner == "http://banner.jpg"
         assert details.country == "Netherlands"
         assert details.joined_date == "Joined Sep 11, 2015"
-        assert details.view_count == "291,498,626 views"
-        assert details.subscribers == "1.2M subscribers"
-        assert details.video_count == "400 videos"
+        assert details.view_count == 291_498_626
+        assert details.view_count_text == "291,498,626 views"
+        assert details.subscribers == 1_200_000
+        assert details.subscribers_text == "1.2M subscribers"
+        assert details.video_count == 400
+        assert details.video_count_text == "400 videos"
         assert details.description == "Channel bio"
         assert details.links == {
             "x": "https://twitter.com/CodeBrux",

@@ -1,3 +1,7 @@
+---
+description: "Retrieve rich metadata for any YouTube channel — subscribers, external links, banner, join date, and more — by id, handle, or URL."
+---
+
 # Fetch Channel Metadata with YouTube.channel() in ytscrape
 
 > Retrieve rich metadata for any YouTube channel — subscribers, external links, banner, join date, and more — by id, handle, or URL.
@@ -44,7 +48,7 @@ with YouTube() as yt:
 
     print(f"Title:        {details.title}")
     print(f"Handle:       {details.handle}")
-    print(f"Subscribers:  {details.subscribers}")
+    print(f"Subscribers:  {details.subscribers_text} ({details.subscribers})")
     print(f"Videos:       {details.video_count}")
     print(f"Views:        {details.view_count}")
     print(f"Country:      {details.country}")
@@ -89,9 +93,10 @@ If a channel has no external links, `links` is an empty dictionary.
 | `title`               | `str \| None`     | Channel display name                                                    |
 | `description`         | `str \| None`     | Channel description                                                     |
 | `handle`              | `str \| None`     | `@handle` when available                                                |
-| `subscribers`         | `str \| None`     | Subscriber count as rendered by YouTube (e.g. `"1.23M subscribers"`)    |
-| `video_count`         | `str \| None`     | Number of public videos                                                 |
-| `view_count`          | `str \| None`     | Total channel view count                                                |
+| `subscribers`         | `int \| None`     | Subscriber count (raw text in `subscribers_text`)                       |
+| `video_count`         | `int \| None`     | Number of public videos (raw text in `video_count_text`)                |
+| `view_count`          | `int \| None`     | Total channel view count (raw text in `view_count_text`)                |
+| `thumbnails`          | `tuple[Thumbnail, ...]` | All avatar sizes                                                   |
 | `keywords`            | `tuple[str, ...]` | Channel keywords / tags                                                 |
 | `tags`                | `tuple[str, ...]` | Microformat tags (may overlap with `keywords`)                          |
 | `thumbnail`           | `str \| None`     | Channel avatar URL (alias for `photo`)                                  |

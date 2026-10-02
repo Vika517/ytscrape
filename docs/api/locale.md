@@ -1,3 +1,7 @@
+---
+description: "Reference for the Language, Country, and Locale value objects that configure and localise ytscrape's InnerTube requests by language and region."
+---
+
 # Language, Country, and Locale classes — ytscrape reference
 
 > Reference for the Language, Country, and Locale value objects that configure and localise ytscrape's InnerTube requests by language and region.

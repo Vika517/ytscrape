@@ -95,3 +95,20 @@ def test_to_dict_passthrough_primitives() -> None:
     assert to_dict(None) is None
     assert to_dict(3) == 3
     assert to_dict({"a": Video(video_id="x")})["a"]["video_id"] == "x"
+
+
+def test_datetime_and_thumbnails_serialise() -> None:
+    from datetime import datetime, timezone
+
+    from ytscrape import Thumbnail, Video
+
+    video = Video(
+        video_id="v",
+        published_at=datetime(2020, 1, 2, tzinfo=timezone.utc),
+        thumbnails=(Thumbnail("u", 1, 2),),
+    )
+    data = video.to_dict()
+    assert data["published_at"] == "2020-01-02T00:00:00+00:00"
+    assert data["thumbnails"] == [{"url": "u", "width": 1, "height": 2}]
+    assert "2020-01-02T00:00:00+00:00" in video.to_csv()
+    assert '"published_at": "2020-01-02T00:00:00+00:00"' in video.to_json()

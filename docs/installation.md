@@ -1,3 +1,7 @@
+---
+description: "Install ytscrape via pip or uv, verify the setup, review the three runtime dependencies (requests, pycountry, defusedxml), and configure a dev environment."
+---
+
 # Install ytscrape via pip or uv in Your Python Project
 
 > Install ytscrape via pip or uv, verify the setup, review the three runtime dependencies (requests, pycountry, defusedxml), and configure a dev environment.

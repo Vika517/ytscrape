@@ -27,67 +27,101 @@ Async usage (optional ``httpx`` extra)::
 
 from __future__ import annotations
 
+import logging as _logging
+
 from .async_client import AsyncInnerTubeClient
-from .async_results import AsyncCommentThread, AsyncSearchResults
+from .async_results import AsyncChannelVideos, AsyncCommentThread, AsyncSearchResults
 from .async_youtube import AsyncYouTube
-from .client import InnerTubeClient
-from .context import ContextExtractor, InnerTubeContext
+from .client import InnerTubeClient, RateLimiter, RetryPolicy
+from .context import ContextCache, ContextExtractor, InnerTubeContext
 from .exceptions import (
+    AgeRestricted,
+    BotDetected,
+    CaptchaRequired,
+    ConsentRequired,
     ContextExtractionError,
     NoTranscriptFound,
     ParseError,
+    RateLimited,
     RequestError,
     TranscriptError,
     TranscriptsDisabled,
+    VideoUnavailable,
+    YtScrapeError,
     YtScraperError,
 )
 from .export import dump_csv, dump_json, dumps_csv, dumps_json, to_dict
 from .filters import CommentSort, SearchFilter
 from .locale import Country, Language, Locale
-from .models import Channel, ChannelDetails, Comment, Playlist, Video, VideoDetails
-from .results import CommentThread, SearchResults
+from .models import (
+    Channel,
+    ChannelDetails,
+    Comment,
+    Playlist,
+    Thumbnail,
+    UnboundModelError,
+    Video,
+    VideoDetails,
+)
+from .results import ChannelVideos, CommentThread, SearchResults
 from .transcripts import Transcript, TranscriptList, TranscriptSnippet, TranscriptTrack
 from .youtube import YouTube
 
-__version__ = "1.0.1"
+_logging.getLogger("ytscrape").addHandler(_logging.NullHandler())
+
+__version__ = "2.0.0"
 
 __all__ = [
-    "YouTube",
-    "AsyncYouTube",
-    "SearchFilter",
-    "CommentSort",
-    "Language",
-    "Country",
-    "Locale",
-    "SearchResults",
-    "AsyncSearchResults",
-    "CommentThread",
+    "AgeRestricted",
+    "AsyncChannelVideos",
     "AsyncCommentThread",
-    "Video",
+    "AsyncInnerTubeClient",
+    "AsyncSearchResults",
+    "AsyncYouTube",
+    "BotDetected",
+    "CaptchaRequired",
     "Channel",
-    "Playlist",
-    "VideoDetails",
     "ChannelDetails",
+    "ChannelVideos",
     "Comment",
-    "to_dict",
-    "dumps_json",
-    "dumps_csv",
-    "dump_json",
-    "dump_csv",
+    "CommentSort",
+    "CommentThread",
+    "ConsentRequired",
+    "ContextCache",
+    "ContextExtractionError",
+    "ContextExtractor",
+    "Country",
+    "InnerTubeClient",
+    "InnerTubeContext",
+    "Language",
+    "Locale",
+    "NoTranscriptFound",
+    "ParseError",
+    "Playlist",
+    "RateLimited",
+    "RateLimiter",
+    "RequestError",
+    "RetryPolicy",
+    "SearchFilter",
+    "SearchResults",
+    "Thumbnail",
     "Transcript",
+    "TranscriptError",
+    "TranscriptList",
     "TranscriptSnippet",
     "TranscriptTrack",
-    "TranscriptList",
-    "InnerTubeClient",
-    "AsyncInnerTubeClient",
-    "InnerTubeContext",
-    "ContextExtractor",
-    "YtScraperError",
-    "ContextExtractionError",
-    "RequestError",
-    "ParseError",
-    "TranscriptError",
     "TranscriptsDisabled",
-    "NoTranscriptFound",
+    "UnboundModelError",
+    "Video",
+    "VideoDetails",
+    "VideoUnavailable",
+    "YouTube",
+    "YtScrapeError",
+    "YtScraperError",
     "__version__",
+    "dump_csv",
+    "dump_json",
+    "dumps_csv",
+    "dumps_json",
+    "to_dict",
 ]

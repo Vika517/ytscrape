@@ -1,48 +1,114 @@
+---
+description: ytscrape is a free YouTube scraper for Python — search, video and channel metadata, scrape YouTube comments, fetch YouTube transcripts in Python and list channel uploads. Works without a YouTube API key.
+---
+
 <p align="center">
   <img class="ytscrape-wordmark" src="assets/logo_text_dark.png" alt="ytscrape" width="520">
 </p>
 
 # ytscrape — Free Open-Source Python YouTube Scraper
 
-> Learn what ytscrape is, how it uses YouTube's InnerTube API over plain HTTP, and how it compares to the YouTube Data API, yt-dlp, and browser automation.
+**Scrape YouTube from Python without an API key.** Search, video and channel
+metadata, comments and replies, transcripts and channel uploads — plain HTTP,
+typed models, sync *and* async.
 
-ytscrape is a free, open-source Python library that lets you search YouTube, extract video and channel metadata, collect comments and replies, and fetch transcripts — all without an API key, a quota, or a headless browser. It communicates directly with YouTube's internal *InnerTube* API (the same private endpoints the YouTube web app itself uses) through plain HTTP requests, parses the responses into fully-typed, frozen dataclasses, and handles pagination for you automatically.
+[Get started](quickstart.md){ .md-button .md-button--primary }
+[Examples](examples.md){ .md-button }
+[What's new in 2.0](migration-2.0.md){ .md-button }
+
+ytscrape talks directly to YouTube's internal *InnerTube* API (the same endpoints the YouTube web app uses), parses responses into frozen, fully-typed dataclasses, and paginates for you.
 
 ## Features
 
-!!! abstract "No API Key Required"
+<div class="grid cards" markdown>
 
-    ytscrape uses YouTube's internal InnerTube endpoints — no Google Cloud project, no credential management, and no quota to exhaust.
+-   :material-key-remove:{ .lg .middle } **YouTube API without a key**
 
+    ---
 
-!!! abstract "No Browser Needed"
+    No Google Cloud project, no credentials, no daily quota.
 
-    Pure HTTP only. No Selenium, no Playwright, no headless Chrome. Install it and start scraping immediately.
+-   :material-magnify:{ .lg .middle } **Search**
 
+    ---
 
-!!! abstract "Search YouTube"
+    Videos, channels, playlists, Shorts and movies with `SearchFilter`. [Guide](guides/searching.md)
 
-    Search for videos, channels, playlists, Shorts, and movies using `SearchFilter`. Pass a `max_results` cap or iterate indefinitely.
+-   :material-information-outline:{ .lg .middle } **Video & channel metadata**
 
+    ---
 
-!!! abstract "Video & Channel Metadata"
+    Numeric views and subscribers, datetimes, thumbnails. [Models](guides/models.md)
 
-    Fetch rich details via `yt.video()` and `yt.channel()`. Typed models surface every field — views, duration, subscribers, join date, links, and more.
+-   :material-comment-multiple-outline:{ .lg .middle } **Scrape YouTube comments**
 
+    ---
 
-!!! abstract "Comments & Replies"
+    Every comment and reply with `yt.comments()`. [Guide](guides/comments.md)
 
-    Collect every comment with `yt.comments()`. Include threaded replies with `include_replies=True`, and use `CommentSort.NEWEST` to ensure no comment is skipped.
+-   :material-subtitles-outline:{ .lg .middle } **YouTube transcripts in Python**
 
+    ---
 
-!!! abstract "Transcripts & Subtitles"
+    Manual or auto-generated captions, any language. [Guide](guides/transcripts.md)
 
-    List available caption tracks with `yt.transcripts()` and download a preferred one with `yt.transcript()`. Manual captions are automatically preferred over auto-generated ones.
+-   :material-playlist-play:{ .lg .middle } **Channel uploads**
 
+    ---
 
-!!! abstract "Async API (optional)"
+    Lazy `channel_videos()` over the Videos tab. [Guide](guides/channel-videos.md)
 
-    Install `ytscrape[async]` for `AsyncYouTube` — the same public surface as `YouTube`, backed by httpx, with concurrency limits and exponential backoff. Ideal when scraping many videos in parallel.
+-   :material-shield-refresh-outline:{ .lg .middle } **Reliable**
+
+    ---
+
+    Retries with backoff, rate limiting, bot/consent detection. [Guide](guides/reliability.md)
+
+-   :material-lightning-bolt-outline:{ .lg .middle } **Async API**
+
+    ---
+
+    `AsyncYouTube` on httpx with concurrency limits. [Guide](guides/async.md)
+
+</div>
+
+## Quick example
+
+```bash
+pip install ytscrape
+```
+
+=== "Sync"
+
+    ```python
+    from ytscrape import SearchFilter, YouTube
+
+    with YouTube() as yt:
+        for video in yt.search("python tutorial", filter=SearchFilter.VIDEOS, max_results=5):
+            print(video.title, video.views, video.url)
+
+        transcript = yt.transcript("dQw4w9WgXcQ", languages=["en"])
+        print(transcript.text[:200])
+
+        for comment in yt.comments("dQw4w9WgXcQ", max_results=10):
+            print(comment.author, comment.like_count, comment.text)
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    from ytscrape import AsyncYouTube
+
+    async def main() -> None:
+        async with AsyncYouTube() as yt:
+            results = await yt.search("python tutorial", max_results=5)
+            async for video in results:
+                details = await video.details()
+                print(details.title, details.views, details.published_at)
+
+    asyncio.run(main())
+    ```
 
 ## How ytscrape Compares
 

@@ -18,14 +18,16 @@ def run_sync() -> None:
     with YouTube() as yt:
         print("Channels:")
         for channel in yt.search("python", filter=SearchFilter.CHANNELS, max_results=5):
-            print(f"  {channel.title} — {channel.subscribers}")
+            print(
+                f"  {channel.title} — {channel.subscribers_text} ({channel.subscribers})"
+            )
             print(f"    {channel.url}")
 
         print("\nPlaylists:")
         for playlist in yt.search(
             "python", filter=SearchFilter.PLAYLISTS, max_results=5
         ):
-            print(f"  {playlist.title} ({playlist.video_count})")
+            print(f"  {playlist.title} ({playlist.video_count} videos)")
             print(f"    {playlist.url}")
 
 
@@ -36,7 +38,9 @@ async def run_async() -> None:
             "python", filter=SearchFilter.CHANNELS, max_results=5
         )
         async for channel in channels:
-            print(f"  {channel.title} — {channel.subscribers}")
+            print(
+                f"  {channel.title} — {channel.subscribers_text} ({channel.subscribers})"
+            )
             print(f"    {channel.url}")
 
         print("\nPlaylists:")
@@ -44,7 +48,7 @@ async def run_async() -> None:
             "python", filter=SearchFilter.PLAYLISTS, max_results=5
         )
         async for playlist in playlists:
-            print(f"  {playlist.title} ({playlist.video_count})")
+            print(f"  {playlist.title} ({playlist.video_count} videos)")
             print(f"    {playlist.url}")
 
 

@@ -1,3 +1,7 @@
+---
+description: "Reference for VideoDetails and ChannelDetails, the rich frozen dataclass models returned by YouTube.video() and YouTube.channel() respectively."
+---
+
 # Detail models: VideoDetails and ChannelDetails API
 
 > Reference for VideoDetails and ChannelDetails, the rich frozen dataclass models returned by YouTube.video() and YouTube.channel() respectively.
@@ -40,7 +44,7 @@ Returned by `YouTube.video()`. Contains every piece of metadata available from t
 
 **`views`** (`int | None`)
 
-:   Exact view count as an integer (e.g. `1458723912`). Unlike the search-result `views` string, this is a true integer suitable for arithmetic. `None` if unavailable.
+:   Exact view count as an integer (e.g. `1458723912`).  `None` if unavailable.
 
 
 **`keywords`** (`tuple[str, ...]`)
@@ -57,6 +61,14 @@ Returned by `YouTube.video()`. Contains every piece of metadata available from t
 
 :   URL of the highest-resolution thumbnail from the player response.
 
+
+**`published_at`** / **`uploaded_at`** (`datetime | None`)
+
+:   Parsed datetimes of `published` / `upload_date` (new in 2.0).
+
+**`thumbnails`** (`tuple[Thumbnail, ...]`)
+
+:   All thumbnail sizes.
 
 **`published`** (`str | None`)
 
@@ -139,19 +151,19 @@ Returned by `YouTube.channel()`. Aggregates metadata from the InnerTube `browse`
 :   The channel's `@handle` (e.g. `"@RickAstleyYT"`). Extracted from the page header metadata or the vanity URL.
 
 
-**`subscribers`** (`str | None`)
+**`subscribers`** (`int | None`)
 
-:   Formatted subscriber count as YouTube renders it (e.g. `"1.23M subscribers"`).
+:   Subscriber count as an integer; raw wording in **`subscribers_text`** (e.g. `"1.23M subscribers"`).
 
 
-**`video_count`** (`str | None`)
+**`video_count`** (`int | None`)
 
 :   Formatted video count (e.g. `"142 videos"`).
 
 
-**`view_count`** (`str | None`)
+**`view_count`** (`int | None`)
 
-:   Formatted total view count as shown in the About panel (e.g. `"1,234,567,890 views"`). Requires the About panel data; `None` otherwise.
+:   Total view count from the About panel as an integer; raw wording in **`view_count_text`**. Requires the About panel data; `None` otherwise.
 
 
 **`keywords`** (`tuple[str, ...]`)
@@ -249,7 +261,8 @@ channel = yt.channel("@RickAstleyYT")
 
 print(channel.title)  # "Rick Astley"
 print(channel.handle)  # "@RickAstleyYT"
-print(channel.subscribers)  # "4.36M subscribers"
+print(channel.subscribers)       # 4360000
+print(channel.subscribers_text)  # "4.36M subscribers"
 print(channel.joined_date)  # "Joined Oct 24, 2013"
 print(channel.country)  # "United Kingdom"
 print(channel.banner)  # "https://yt3.googleusercontent.com/…"

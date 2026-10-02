@@ -1,3 +1,7 @@
+---
+description: "Reference for every exception class raised by ytscrape, covering the full class hierarchy, extra attributes, and when each exception is raised."
+---
+
 # Exception classes and error hierarchy — ytscrape reference
 
 > Reference for every exception class raised by ytscrape, covering the full class hierarchy, extra attributes, and when each exception is raised.

@@ -3,16 +3,34 @@
   <img src="https://raw.githubusercontent.com/vsmutok/ytscrape/main/docs/assets/logo_text.png#gh-dark-mode-only" alt="ytscrape" width="520">
 </p>
 
-# ytscrape — Free YouTube Scraper for Python
+# ytscrape — YouTube Scraper for Python (No API Key)
 
-**Scrape YouTube search results, video & channel metadata, comments and
-transcripts — no API key, no quota, no browser.**
+**The fast, free, open-source Python YouTube scraper. Scrape YouTube search
+results, video metadata, channel info, comments, replies and transcripts —
+no API key, no quota, no Selenium, no browser.**
 
+[![Tests](https://github.com/vsmutok/ytscrape/actions/workflows/tests.yml/badge.svg)](https://github.com/vsmutok/ytscrape/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/vsmutok/ytscrape/branch/main/graph/badge.svg)](https://codecov.io/gh/vsmutok/ytscrape)
 [![PyPI version](https://img.shields.io/pypi/v/ytscrape.svg)](https://pypi.org/project/ytscrape/)
 [![Python versions](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://pypi.org/project/ytscrape/)
 [![Downloads](https://img.shields.io/pepy/dt/ytscrape)](https://pepy.tech/project/ytscrape)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/vsmutok/ytscrape?style=flat)](https://github.com/vsmutok/ytscrape/stargazers)
+[![Docs](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://vsmutok.github.io/ytscrape/)
+[![Typed](https://img.shields.io/badge/typing-py.typed-informational.svg)](https://peps.python.org/pep-0561/)
+
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick start</a> •
+  <a href="#what-can-you-scrape-from-youtube">Features</a> •
+  <a href="#use-cases">Use cases</a> •
+  <a href="#ytscrape-vs-the-alternatives">Comparison</a> •
+  <a href="#faq">FAQ</a> •
+  <a href="https://vsmutok.github.io/ytscrape/">Docs</a>
+</p>
+
+> ⭐ **If ytscrape saves you time, please star the repo** — it helps other
+> developers searching for a *YouTube scraper* find it.
 
 ```python
 from ytscrape import YouTube
@@ -30,6 +48,18 @@ Sync (`YouTube`) and async (`AsyncYouTube`) share the same surface.
 > ⚠️ This library uses YouTube's private endpoints. Use it responsibly and at
 > your own risk — the endpoints may change over time.
 
+## What can you scrape from YouTube?
+
+| Data | Method | CLI |
+| ---- | ------ | --- |
+| 🔎 YouTube search results (videos, channels, playlists, Shorts, movies) | `yt.search()` | `ytscrape search` |
+| 🎬 Video metadata (title, channel, views, duration, description) | `yt.video()` | `ytscrape video` |
+| 📺 Channel info (subscribers, handle, links, join date) | `yt.channel()` | `ytscrape channel` |
+| 💬 Comments **and replies** (every comment, not only "Top") | `yt.comments()` | `ytscrape comments` |
+| 📝 Transcripts / subtitles / captions | `yt.transcript()` | `ytscrape transcript` |
+
+Export everything to **JSON or CSV** in one line.
+
 ## Why ytscrape?
 
 - 🔑 **No API key, no quota** — nothing to register, no billing project.
@@ -42,6 +72,15 @@ Sync (`YouTube`) and async (`AsyncYouTube`) share the same surface.
 - 🖥️ **CLI included** — `ytscrape search "python" --max 10`.
 - 📤 **JSON / CSV export** — `video.to_json()`, `dumps_csv(results)`, or
   `ytscrape search "python" --format json`.
+
+## Use cases
+
+- 📊 **Data science & research** — build YouTube datasets for analysis.
+- 🤖 **AI / LLM / RAG pipelines** — pull YouTube transcripts as training or retrieval data.
+- 💬 **Sentiment analysis** — scrape YouTube comments at scale.
+- 📈 **SEO & marketing** — keyword research, competitor channel monitoring.
+- 🧪 **Academic studies** — reproducible collection of video & channel metadata.
+- 🛠️ **Bots & automations** — lightweight alternative to the YouTube Data API v3.
 
 ## Installation
 
@@ -110,7 +149,9 @@ asyncio.run(main())
 | Typed models + `py.typed` | ✅ | PEP 561                                                |
 | CLI | ✅ | `ytscrape` / `python -m ytscrape`                      |
 | Async API | ✅ | `AsyncYouTube` via `ytscrape[async]`                   |
-| Channel tabs, playlist items, related / trending | 🚧 | Planned                                                 |
+| Channel videos tab (`yt.channel_videos()`) | ✅ | Lazy pagination                                        |
+| Retries, backoff, rate limiting, bot detection | ✅ | `RetryPolicy`, `RateLimiter`, `min_interval`           |
+| Other channel tabs, playlist items, related / trending | 🚧 | Planned                                                 |
 
 ## ytscrape vs. the alternatives
 
@@ -261,4 +302,12 @@ uv run pre-commit run --all-files
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — free for personal and commercial use.
+
+---
+
+<sub>**Keywords:** youtube scraper, python youtube scraper, scrape youtube,
+youtube scraping, youtube comments scraper, youtube transcript downloader,
+youtube search api python, youtube data api alternative, youtube api without
+key, innertube api, youtube metadata extractor, youtube channel scraper,
+youtube crawler, youtube shorts scraper, async youtube scraper.</sub>

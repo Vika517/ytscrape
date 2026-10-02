@@ -1,20 +1,80 @@
+---
+description: ytscrape exception hierarchy — catch RateLimited, BotDetected, VideoUnavailable, AgeRestricted, ParseError and transcript errors when you scrape YouTube with Python.
+---
+
 # Handle ytscrape errors: exceptions and error hierarchy
 
-> Understand the ytscrape exception hierarchy and learn which exception to catch for network errors, parse failures, and missing transcripts.
+> Understand the ytscrape exception hierarchy and learn which exception to catch for network errors, rate limits, bot checks, unavailable videos, parse failures, and missing transcripts.
 
-Every error raised by ytscrape derives from a single base class, `YtScraperError`, so you always have a clean catch-all. For finer-grained control, catch the specific subclasses described below.
+Every error raised by ytscrape derives from a single base class, `YtScrapeError` (`YtScraperError` is kept as an alias), so you always have a clean catch-all.
 
 ## Exception hierarchy
 
-| Exception                | Raised when                                                                                                                                |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `YtScraperError`         | Base class for every error in the table below.                                                                                             |
-| `ContextExtractionError` | The InnerTube context (API key, client version, visitor data) could not be extracted from the YouTube home page.                           |
-| `RequestError`           | An HTTP request to YouTube failed — network error, timeout, or a non-2xx response.                                                         |
-| `ParseError`             | A YouTube response could not be parsed as expected (e.g. an unrecognised page structure, an invalid video id, or comments being disabled). |
-| `TranscriptError`        | Base class for the two transcript-specific failures below.                                                                                 |
-| `TranscriptsDisabled`    | The video has no caption tracks, or captions have been disabled by the uploader.                                                           |
-| `NoTranscriptFound`      | Caption tracks exist, but none match any of the requested language codes.                                                                  |
+```text
+YtScrapeError (alias YtScraperError)
+├── ContextExtractionError
+├── RequestError(status_code, url)
+│   ├── RateLimited(retry_after)
+│   ├── BotDetected (alias CaptchaRequired)
+│   └── ConsentRequired
+├── VideoUnavailable(video_id, reason)
+│   └── AgeRestricted
+├── ParseError
+└── TranscriptError
+    ├── TranscriptsDisabled
+    └── NoTranscriptFound
+```
+
+| Exception                | Raised when |
+| ------------------------ | ----------- |
+| `ContextExtractionError` | The InnerTube context could not be extracted from the YouTube home page. |
+| `RequestError`           | An HTTP request failed (network error, timeout, non-2xx) after retries. Has `status_code` and `url`. |
+| `RateLimited`            | HTTP 429 persisted after retries; `retry_after` holds the server hint (seconds) if any. |
+| `BotDetected`            | YouTube served a captcha / "confirm you're not a bot" page. |
+| `ConsentRequired`        | YouTube redirected to the cookie-consent wall. |
+| `VideoUnavailable`       | `video()` targets a private, removed or otherwise unplayable video; has `video_id` and `reason`. |
+| `AgeRestricted`          | The video requires sign-in for age verification. |
+| `ParseError`             | A response could not be parsed (unrecognised structure, invalid id, disabled comments). |
+| `TranscriptsDisabled`    | The video has no caption tracks. |
+| `NoTranscriptFound`      | Caption tracks exist, but none match the requested languages. |
+
+!!! tip
+    Transient failures (429, 5xx, connection errors) are retried automatically —
+    see [Reliability](reliability.md).
+
+=== "Sync"
+
+    ```python
+    from ytscrape import AgeRestricted, BotDetected, RateLimited, VideoUnavailable, YouTube, YtScrapeError
+
+    with YouTube() as yt:
+        try:
+            details = yt.video("dQw4w9WgXcQ")
+        except AgeRestricted:
+            print("Age-restricted")
+        except VideoUnavailable as exc:
+            print(f"Unavailable: {exc.reason}")
+        except RateLimited as exc:
+            print(f"Slow down, retry after {exc.retry_after}s")
+        except BotDetected:
+            print("Bot check — change IP or wait")
+        except YtScrapeError as exc:
+            print(f"Other error: {exc}")
+    ```
+
+=== "Async"
+
+    ```python
+    from ytscrape import AsyncYouTube, VideoUnavailable, YtScrapeError
+
+    async with AsyncYouTube() as yt:
+        try:
+            details = await yt.video("dQw4w9WgXcQ")
+        except VideoUnavailable as exc:
+            print(f"Unavailable: {exc.reason}")
+        except YtScrapeError as exc:
+            print(f"Other error: {exc}")
+    ```
 
 ## Code example
 

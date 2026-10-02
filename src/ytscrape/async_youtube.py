@@ -7,7 +7,13 @@ from urllib.parse import urlparse
 
 from . import parsing
 from .async_client import AsyncInnerTubeClient
-from .async_results import AsyncCommentThread, AsyncSearchResults
+from .async_results import (
+    AsyncChannelVideos,
+    AsyncCommentThread,
+    AsyncSearchResults,
+)
+from .client import RateLimiter, RetryPolicy, check_playability
+from .context import ContextCache
 from .exceptions import ParseError
 from .filters import CommentSort, SearchFilter
 from .locale import Country, Language, Locale
@@ -72,6 +78,10 @@ class AsyncYouTube:
         max_concurrency: int = 8,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
+        retry: RetryPolicy | None = None,
+        min_interval: float = 0.0,
+        rate_limiter: RateLimiter | None = None,
+        context_cache: ContextCache | bool | None = None,
     ) -> None:
         self._client = client or AsyncInnerTubeClient(
             locale=locale,
@@ -81,6 +91,10 @@ class AsyncYouTube:
             max_concurrency=max_concurrency,
             max_retries=max_retries,
             backoff_factor=backoff_factor,
+            retry=retry,
+            min_interval=min_interval,
+            rate_limiter=rate_limiter,
+            context_cache=context_cache,
         )
 
     @property
@@ -103,7 +117,9 @@ class AsyncYouTube:
         """Search YouTube and return paginated :class:`AsyncSearchResults`."""
         search_filter = SearchFilter.from_value(filter)
         first_page = await self._client.search(query, params=search_filter.params)
-        return AsyncSearchResults(self._client, first_page, max_results=max_results)
+        return AsyncSearchResults(
+            self._client, first_page, max_results=max_results, youtube=self
+        )
 
     async def transcript(
         self,
@@ -130,7 +146,8 @@ class AsyncYouTube:
         """Fetch detailed metadata for a single video."""
         video_id = YouTube._normalize_video_id(video)
         response = await self._client.player(video_id)
-        return VideoDetails.from_player_response(response)
+        check_playability(response, video_id)
+        return VideoDetails.from_player_response(response).bind(self)
 
     async def channel(self, channel: str) -> ChannelDetails:
         """Fetch detailed metadata for a single channel."""
@@ -145,7 +162,23 @@ class AsyncYouTube:
         details = ChannelDetails.from_browse_response(response, about=about_response)
         if not details.channel_id:
             raise ParseError(f"Could not parse channel metadata for {channel_id!r}.")
-        return details
+        return details.bind(self)
+
+    async def channel_videos(
+        self, channel: str, *, max_results: int | None = None
+    ) -> AsyncChannelVideos:
+        """List a channel's uploads (Videos tab) as an async paginated iterable."""
+        channel_id = await self._normalize_channel_id(channel)
+        first_page = await self._client.browse(
+            channel_id, params=parsing.CHANNEL_VIDEOS_PARAMS
+        )
+        return AsyncChannelVideos(
+            self._client,
+            channel_id,
+            first_page,
+            max_results=max_results,
+            youtube=self,
+        )
 
     async def comments(
         self,

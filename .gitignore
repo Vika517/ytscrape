@@ -34,3 +34,6 @@ site/
 
 # OS
 .DS_Store
+
+# Junie
+.junie/

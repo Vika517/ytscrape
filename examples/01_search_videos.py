@@ -23,7 +23,9 @@ def run_sync() -> None:
         )
         for video in results:
             print(f"{video.title}  ({video.duration})")
-            print(f"  by {video.channel} — {video.views}")
+            print(
+                f"  by {video.channel} — {video.views_text} ({video.views} views, {video.published_text})"
+            )
             print(f"  {video.url}")
 
 
@@ -36,7 +38,9 @@ async def run_async() -> None:
         )
         async for video in results:
             print(f"{video.title}  ({video.duration})")
-            print(f"  by {video.channel} — {video.views}")
+            print(
+                f"  by {video.channel} — {video.views_text} ({video.views} views, {video.published_text})"
+            )
             print(f"  {video.url}")
 
 

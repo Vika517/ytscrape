@@ -17,8 +17,8 @@ from ytscrape import AsyncYouTube, ChannelDetails, YouTube
 def _print_channel(details: ChannelDetails) -> None:
     print(f"Title:        {details.title}")
     print(f"Handle:       {details.handle}")
-    print(f"Subscribers:  {details.subscribers}")
-    print(f"Videos:       {details.video_count}")
+    print(f"Subscribers:  {details.subscribers_text} ({details.subscribers})")
+    print(f"Videos:       {details.video_count_text} ({details.video_count})")
     print(f"Views:        {details.view_count}")
     print(f"Country:      {details.country}")
     print(f"Joined:       {details.joined_date}")

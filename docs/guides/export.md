@@ -1,3 +1,7 @@
+---
+description: "Export to JSON and CSV — ytscrape, the Python YouTube scraper without an API key."
+---
+
 # Export to JSON and CSV
 
 Every model (`Video`, `Comment`, `VideoDetails`, `Transcript`, …) can serialize

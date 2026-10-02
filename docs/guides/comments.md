@@ -1,3 +1,7 @@
+---
+description: "Iterate every comment and reply on a YouTube video using ytscrape's lazy CommentThread, control sort order, and handle disabled comments."
+---
+
 # Collect YouTube video comments and replies with ytscrape
 
 > Iterate every comment and reply on a YouTube video using ytscrape's lazy CommentThread, control sort order, and handle disabled comments.

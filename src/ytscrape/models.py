@@ -9,13 +9,179 @@ parsing details.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+import re
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta, timezone
+from typing import Any, TypeVar
 from urllib.parse import parse_qs, unquote, urlparse
 
 from .export import Exportable
 
-__all__ = ["Video", "Channel", "Playlist", "VideoDetails", "ChannelDetails", "Comment"]
+__all__ = [
+    "Channel",
+    "ChannelDetails",
+    "Comment",
+    "Playlist",
+    "Thumbnail",
+    "UnboundModelError",
+    "Video",
+    "VideoDetails",
+    "parse_count",
+    "parse_date",
+    "parse_relative_time",
+]
+
+_T = TypeVar("_T")
+
+
+class UnboundModelError(RuntimeError):
+    """Raised when a navigation helper is used on a model without a client.
+
+    Models returned by :class:`~ytscrape.YouTube` / :class:`~ytscrape.AsyncYouTube`
+    are bound automatically; models built by hand (or via ``from_renderer``)
+    must be bound with ``model.bind(yt)`` first.
+    """
+
+
+def _bound(model: Any) -> Any:
+    yt = model._yt
+    if yt is None:
+        raise UnboundModelError(
+            f"{type(model).__name__} is not bound to a YouTube client; "
+            "obtain it from YouTube/AsyncYouTube or call .bind(yt) first."
+        )
+    return yt
+
+
+def bind(obj: _T, youtube: Any) -> _T:
+    """Return ``obj`` with its private ``_yt`` reference set (if it has one)."""
+    if youtube is not None and hasattr(obj, "_yt"):
+        return replace(obj, _yt=youtube)  # type: ignore[type-var]
+    return obj
+
+
+_COUNT_RE = re.compile(r"(\d[\d,.\s\u00a0]*)\s*([KMB])?", re.IGNORECASE)
+_MULTIPLIERS = {"k": 1_000, "m": 1_000_000, "b": 1_000_000_000}
+
+
+def parse_count(value: Any) -> int | None:
+    """Parse YouTube count text such as ``"1.2M views"`` or ``"1,234"``.
+
+    ``"No views"`` yields ``0``; unparsable text yields ``None``.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, dict):
+        value = _text(value)
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    if text.lower().startswith("no "):
+        return 0
+    match = _COUNT_RE.search(text)
+    if not match:
+        return None
+    number = re.sub(r"[\s\u00a0]", "", match.group(1)).rstrip(".,")
+    suffix = match.group(2)
+    if suffix:
+        try:
+            amount = float(number.replace(",", "."))
+            return round(amount * _MULTIPLIERS[suffix.lower()])
+        except ValueError:
+            return None
+    digits = number.replace(",", "").replace(".", "")
+    return int(digits) if digits.isdigit() else None
+
+
+_RELATIVE_RE = re.compile(
+    r"(\d+)\s*(second|sec|minute|min|hour|day|week|month|year)s?\s+ago",
+    re.IGNORECASE,
+)
+_UNIT_SECONDS = {
+    "second": 1,
+    "sec": 1,
+    "minute": 60,
+    "min": 60,
+    "hour": 3600,
+    "day": 86400,
+    "week": 7 * 86400,
+    "month": 30 * 86400,
+    "year": 365 * 86400,
+}
+
+
+def parse_relative_time(
+    text: str | None, *, now: datetime | None = None
+) -> datetime | None:
+    """Approximate a UTC datetime from English text like ``"3 days ago"``.
+
+    Months count as 30 days and years as 365 days, so the result is only an
+    estimate. Returns ``None`` when the text is not recognised.
+    """
+    if not text:
+        return None
+    match = _RELATIVE_RE.search(text)
+    if not match:
+        return None
+    seconds = int(match.group(1)) * _UNIT_SECONDS[match.group(2).lower()]
+    base = now or datetime.now(timezone.utc)
+    return base - timedelta(seconds=seconds)
+
+
+def parse_date(value: Any) -> datetime | None:
+    """Parse an ISO 8601 date/datetime (``publishDate``) into an aware datetime.
+
+    Date-only values become midnight UTC; naive datetimes are assumed UTC.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+@dataclass(frozen=True, slots=True)
+class Thumbnail(Exportable):
+    """One thumbnail variant."""
+
+    url: str
+    width: int | None = None
+    height: int | None = None
+
+
+def _thumbnails(node: Any) -> tuple[Thumbnail, ...]:
+    """Return every thumbnail variant found under ``node``."""
+    if not isinstance(node, dict):
+        return ()
+    items = node.get("thumbnails")
+    if not isinstance(items, list):
+        items = node.get("sources")
+    if not isinstance(items, list):
+        return ()
+    result: list[Thumbnail] = []
+    for item in items:
+        if isinstance(item, dict) and isinstance(item.get("url"), str):
+            width = item.get("width")
+            height = item.get("height")
+            result.append(
+                Thumbnail(
+                    url=item["url"],
+                    width=width if isinstance(width, int) else None,
+                    height=height if isinstance(height, int) else None,
+                )
+            )
+    return tuple(result)
 
 
 def _text(node: Any) -> str | None:
@@ -55,15 +221,38 @@ class Video(Exportable):
     channel: str | None = None
     channel_id: str | None = None
     duration: str | None = None
-    views: str | None = None
-    published: str | None = None
+    views: int | None = None
+    views_text: str | None = None
+    published_text: str | None = None
+    published_at: datetime | None = None
     thumbnail: str | None = None
+    thumbnails: tuple[Thumbnail, ...] = field(default_factory=tuple)
     description: str | None = None
+    _yt: Any = field(default=None, compare=False, repr=False)
 
     @property
     def url(self) -> str:
         """Canonical watch URL for the video."""
         return f"https://www.youtube.com/watch?v={self.video_id}"
+
+    def bind(self, youtube: Any) -> Video:
+        """Return a copy bound to ``youtube`` (enables navigation helpers)."""
+        return bind(self, youtube)
+
+    def details(self) -> Any:
+        """Fetch :class:`VideoDetails` (awaitable when bound to AsyncYouTube)."""
+        return _bound(self).video(self.video_id)
+
+    def comments(self, **kwargs: Any) -> Any:
+        """Comments of this video; kwargs are passed to ``YouTube.comments``."""
+        return _bound(self).comments(self.video_id, **kwargs)
+
+    def channel_details(self) -> Any:
+        """Fetch the uploader's :class:`ChannelDetails`."""
+        yt = _bound(self)
+        if not self.channel_id:
+            raise UnboundModelError("Video has no channel_id to navigate to.")
+        return yt.channel(self.channel_id)
 
     @classmethod
     def from_renderer(cls, renderer: dict[str, Any]) -> Video:
@@ -74,15 +263,20 @@ class Video(Exportable):
         if runs:
             nav = runs[0].get("navigationEndpoint", {}).get("browseEndpoint", {})
             channel_id = nav.get("browseId")
+        views_text = _text(renderer.get("viewCountText"))
+        published_text = _text(renderer.get("publishedTimeText"))
         return cls(
             video_id=renderer.get("videoId", ""),
             title=_text(renderer.get("title")),
             channel=_text(owner),
             channel_id=channel_id,
             duration=_text(renderer.get("lengthText")),
-            views=_text(renderer.get("viewCountText")),
-            published=_text(renderer.get("publishedTimeText")),
+            views=parse_count(views_text),
+            views_text=views_text,
+            published_text=published_text,
+            published_at=parse_relative_time(published_text),
             thumbnail=_thumbnail(renderer.get("thumbnail")),
+            thumbnails=_thumbnails(renderer.get("thumbnail")),
             description=_text(renderer.get("descriptionSnippet")),
         )
 
@@ -94,27 +288,56 @@ class Channel(Exportable):
     channel_id: str
     title: str | None = None
     handle: str | None = None
-    subscribers: str | None = None
-    video_count: str | None = None
+    subscribers: int | None = None
+    subscribers_text: str | None = None
+    video_count: int | None = None
+    video_count_text: str | None = None
     thumbnail: str | None = None
+    thumbnails: tuple[Thumbnail, ...] = field(default_factory=tuple)
+    _yt: Any = field(default=None, compare=False, repr=False)
 
     @property
     def url(self) -> str:
         """Canonical channel URL."""
         return f"https://www.youtube.com/channel/{self.channel_id}"
 
+    def bind(self, youtube: Any) -> Channel:
+        """Return a copy bound to ``youtube`` (enables navigation helpers)."""
+        return bind(self, youtube)
+
+    def details(self) -> Any:
+        """Fetch :class:`ChannelDetails` (awaitable when async-bound)."""
+        return _bound(self).channel(self.channel_id)
+
+    def videos(self, **kwargs: Any) -> Any:
+        """Uploads of this channel; kwargs go to ``YouTube.channel_videos``."""
+        return _bound(self).channel_videos(self.channel_id, **kwargs)
+
     @classmethod
     def from_renderer(cls, renderer: dict[str, Any]) -> Channel:
-        """Build a :class:`Channel` from a ``channelRenderer`` dictionary."""
+        """Build a :class:`Channel` from a ``channelRenderer`` dictionary.
+
+        YouTube reuses ``subscriberCountText`` for the ``@handle`` and
+        ``videoCountText`` for the subscriber count on modern layouts, so each
+        text is classified by content rather than by key.
+        """
+        texts = [
+            _text(renderer.get("subscriberCountText")),
+            _text(renderer.get("videoCountText")),
+        ]
+        handle = next((t for t in texts if t and t.startswith("@")), None)
+        subs_text = next((t for t in texts if t and "subscriber" in t.lower()), None)
+        videos_text = next((t for t in texts if t and "video" in t.lower()), None)
         return cls(
             channel_id=renderer.get("channelId", ""),
             title=_text(renderer.get("title")),
-            handle=_text(renderer.get("subscriberCountText"))
-            if "@" in (_text(renderer.get("subscriberCountText")) or "")
-            else _text(renderer.get("navigationEndpoint")),
-            subscribers=_text(renderer.get("videoCountText")),
-            video_count=_text(renderer.get("videoCountText")),
+            handle=handle,
+            subscribers=parse_count(subs_text),
+            subscribers_text=subs_text,
+            video_count=parse_count(videos_text),
+            video_count_text=videos_text,
             thumbnail=_thumbnail(renderer.get("thumbnail")),
+            thumbnails=_thumbnails(renderer.get("thumbnail")),
         )
 
 
@@ -125,8 +348,10 @@ class Playlist(Exportable):
     playlist_id: str
     title: str | None = None
     channel: str | None = None
-    video_count: str | None = None
+    video_count: int | None = None
+    video_count_text: str | None = None
     thumbnail: str | None = None
+    thumbnails: tuple[Thumbnail, ...] = field(default_factory=tuple)
 
     @property
     def url(self) -> str:
@@ -136,12 +361,22 @@ class Playlist(Exportable):
     @classmethod
     def from_renderer(cls, renderer: dict[str, Any]) -> Playlist:
         """Build a :class:`Playlist` from a ``playlistRenderer`` dictionary."""
+        raw = renderer.get("videoCount")
+        count_text = raw if isinstance(raw, str) else _text(raw)
+        if count_text is None:
+            count_text = _text(renderer.get("videoCountText"))
+        thumb_node = renderer.get("thumbnail")
+        if thumb_node is None:
+            thumbs = renderer.get("thumbnails")
+            thumb_node = thumbs[0] if isinstance(thumbs, list) and thumbs else None
         return cls(
             playlist_id=renderer.get("playlistId", ""),
             title=_text(renderer.get("title")),
             channel=_text(renderer.get("longBylineText")),
-            video_count=renderer.get("videoCount"),
-            thumbnail=_thumbnail(renderer.get("thumbnail")),
+            video_count=parse_count(count_text),
+            video_count_text=count_text,
+            thumbnail=_thumbnail(thumb_node),
+            thumbnails=_thumbnails(thumb_node),
         )
 
 
@@ -159,8 +394,11 @@ class VideoDetails(Exportable):
     keywords: tuple[str, ...] = field(default_factory=tuple)
     is_live: bool = False
     thumbnail: str | None = None
+    thumbnails: tuple[Thumbnail, ...] = field(default_factory=tuple)
     published: str | None = None
+    published_at: datetime | None = None
     upload_date: str | None = None
+    uploaded_at: datetime | None = None
     category: str | None = None
     owner_profile_url: str | None = None
     embed_url: str | None = None
@@ -169,11 +407,27 @@ class VideoDetails(Exportable):
     allow_ratings: bool | None = None
     is_family_safe: bool | None = None
     available_countries: tuple[str, ...] = field(default_factory=tuple)
+    _yt: Any = field(default=None, compare=False, repr=False)
 
     @property
     def url(self) -> str:
         """Canonical watch URL for the video."""
         return f"https://www.youtube.com/watch?v={self.video_id}"
+
+    def bind(self, youtube: Any) -> VideoDetails:
+        """Return a copy bound to ``youtube`` (enables navigation helpers)."""
+        return bind(self, youtube)
+
+    def comments(self, **kwargs: Any) -> Any:
+        """Comments of this video; kwargs are passed to ``YouTube.comments``."""
+        return _bound(self).comments(self.video_id, **kwargs)
+
+    def channel_details(self) -> Any:
+        """Fetch the uploader's :class:`ChannelDetails`."""
+        yt = _bound(self)
+        if not self.channel_id:
+            raise UnboundModelError("Video has no channel_id to navigate to.")
+        return yt.channel(self.channel_id)
 
     @classmethod
     def from_player_response(cls, data: dict[str, Any]) -> VideoDetails:
@@ -226,8 +480,14 @@ class VideoDetails(Exportable):
             ),
             thumbnail=_thumbnail(details.get("thumbnail"))
             or _thumbnail(micro.get("thumbnail")),
+            thumbnails=_thumbnails(details.get("thumbnail"))
+            or _thumbnails(micro.get("thumbnail")),
             published=micro.get("publishDate") or micro.get("uploadDate"),
+            published_at=parse_date(
+                micro.get("publishDate") or micro.get("uploadDate")
+            ),
             upload_date=micro.get("uploadDate"),
+            uploaded_at=parse_date(micro.get("uploadDate")),
             category=micro.get("category"),
             owner_profile_url=micro.get("ownerProfileUrl"),
             embed_url=embed_url if isinstance(embed_url, str) else None,
@@ -294,10 +554,7 @@ def _handle_from_urls(*candidates: Any) -> str | None:
     """Extract an ``@handle`` from vanity / owner URLs when present."""
     for candidate in candidates:
         values: list[Any]
-        if isinstance(candidate, list):
-            values = candidate
-        else:
-            values = [candidate]
+        values = candidate if isinstance(candidate, list) else [candidate]
         for value in values:
             if not isinstance(value, str):
                 continue
@@ -460,8 +717,8 @@ def _link_dict_key(title: str | None, url: str) -> str:
         host = host.removeprefix("www.")
         if host:
             return _slugify_link_key(host.split(".")[0])
-    except Exception:  # Fixme
-        return None
+    except ValueError:
+        pass
     return "link"
 
 
@@ -548,11 +805,15 @@ class ChannelDetails(Exportable):
     title: str | None = None
     description: str | None = None
     handle: str | None = None
-    subscribers: str | None = None
-    video_count: str | None = None
-    view_count: str | None = None
+    subscribers: int | None = None
+    subscribers_text: str | None = None
+    video_count: int | None = None
+    video_count_text: str | None = None
+    view_count: int | None = None
+    view_count_text: str | None = None
     keywords: tuple[str, ...] = field(default_factory=tuple)
     thumbnail: str | None = None
+    thumbnails: tuple[Thumbnail, ...] = field(default_factory=tuple)
     photo: str | None = None
     banner: str | None = None
     vanity_url: str | None = None
@@ -563,11 +824,20 @@ class ChannelDetails(Exportable):
     country: str | None = None
     joined_date: str | None = None
     links: dict[str, str] = field(default_factory=dict)
+    _yt: Any = field(default=None, compare=False, repr=False)
 
     @property
     def url(self) -> str:
         """Canonical channel URL."""
         return f"https://www.youtube.com/channel/{self.channel_id}"
+
+    def bind(self, youtube: Any) -> ChannelDetails:
+        """Return a copy bound to ``youtube`` (enables navigation helpers)."""
+        return bind(self, youtube)
+
+    def videos(self, **kwargs: Any) -> Any:
+        """Uploads of this channel; kwargs go to ``YouTube.channel_videos``."""
+        return _bound(self).channel_videos(self.channel_id, **kwargs)
 
     @classmethod
     def from_browse_response(
@@ -660,17 +930,22 @@ class ChannelDetails(Exportable):
             family_safe = micro.get("familySafe")
 
         photo = _thumbnail(meta.get("avatar")) or _thumbnail(micro.get("thumbnail"))
+        photos = _thumbnails(meta.get("avatar")) or _thumbnails(micro.get("thumbnail"))
 
         return cls(
             channel_id=channel_id if isinstance(channel_id, str) else "",
             title=meta.get("title") or micro.get("title"),
             description=description,
             handle=handle,
-            subscribers=subscribers,
-            video_count=video_count,
-            view_count=view_count,
+            subscribers=parse_count(subscribers),
+            subscribers_text=subscribers,
+            video_count=parse_count(video_count),
+            video_count_text=video_count,
+            view_count=parse_count(view_count),
+            view_count_text=view_count,
             keywords=keywords,
             thumbnail=photo,
+            thumbnails=photos,
             photo=photo,
             banner=_banner_from_header(data),
             vanity_url=vanity if isinstance(vanity, str) else None,

@@ -15,19 +15,20 @@ from __future__ import annotations
 import csv
 import io
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from dataclasses import fields, is_dataclass
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 __all__ = [
-    "Exportable",
     "AsyncExportable",
-    "to_dict",
-    "dumps_json",
-    "dumps_csv",
-    "dump_json",
+    "Exportable",
     "dump_csv",
+    "dump_json",
+    "dumps_csv",
+    "dumps_json",
+    "to_dict",
 ]
 
 _COMPUTED = ("url", "text", "is_translatable")
@@ -38,6 +39,8 @@ def to_dict(obj: Any) -> Any:
     """Convert a model, mapping, or collection into JSON-friendly data."""
     if obj is None or isinstance(obj, (str, int, float, bool)):
         return obj
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
     if isinstance(obj, Mapping):
         return {str(k): to_dict(v) for k, v in obj.items()}
     if is_dataclass(obj) and not isinstance(obj, type):
@@ -110,8 +113,8 @@ def dump_csv(obj: Any, path: str | Path | TextIO) -> None:
 
 
 def _write_text(path: str | Path | TextIO, text: str) -> None:
-    if hasattr(path, "write"):
-        path.write(text)  # type: ignore[union-attr]
+    if not isinstance(path, (str, Path)):
+        path.write(text)
         return
     Path(path).write_text(text, encoding="utf-8")
 
@@ -164,7 +167,7 @@ def _csv_rows(obj: Any) -> list[dict[str, str]]:
             }
             rows = []
             for snippet in snippets:
-                row: dict[str, str] = {}
+                row = {}
                 for key, value in meta.items():
                     _flatten(str(key), value, row)
                 if isinstance(snippet, Mapping):
@@ -201,8 +204,12 @@ class Exportable:
 class AsyncExportable:
     """Mixin for async paginators: ``await obj.to_json()`` / ``dump_csv``."""
 
+    if TYPE_CHECKING:
+
+        def __aiter__(self) -> AsyncIterator[Any]: ...
+
     async def _export_items(self) -> list[Any]:
-        return [item async for item in self]  # type: ignore[misc]
+        return [item async for item in self]
 
     async def to_dict(self) -> Any:
         return to_dict(await self._export_items())

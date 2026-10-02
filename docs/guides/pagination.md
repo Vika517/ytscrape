@@ -1,3 +1,7 @@
+---
+description: "Iterate over search results and comments across multiple pages automatically, or drive page-by-page loading manually with fetch_next_page()."
+---
+
 # Paginate YouTube Search Results and Comments in ytscrape
 
 > Iterate over search results and comments across multiple pages automatically, or drive page-by-page loading manually with fetch_next_page().

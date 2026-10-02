@@ -1,3 +1,7 @@
+---
+description: "Reference for TranscriptSnippet, Transcript, TranscriptTrack, and TranscriptList — the four models powering ytscrape's caption and subtitle support."
+---
+
 # Transcript models: TranscriptSnippet and TranscriptTrack
 
 > Reference for TranscriptSnippet, Transcript, TranscriptTrack, and TranscriptList — the four models powering ytscrape's caption and subtitle support.

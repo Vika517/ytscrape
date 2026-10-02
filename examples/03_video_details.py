@@ -21,9 +21,13 @@ def run_sync() -> None:
 
         print(f"Title:     {details.title}")
         print(f"Channel:   {details.channel}")
-        print(f"Views:     {details.views}")
+        print(
+            f"Views:     {details.views:,}"
+            if details.views is not None
+            else "Views:     n/a"
+        )
         print(f"Length:    {details.length_seconds}s")
-        print(f"Published: {details.published}")
+        print(f"Published: {details.published_at}")
         print(f"Category:  {details.category}")
         print(f"Live:      {details.is_live}")
         print(f"Keywords:  {', '.join(details.keywords[:5])}")
@@ -36,9 +40,13 @@ async def run_async() -> None:
 
         print(f"Title:     {details.title}")
         print(f"Channel:   {details.channel}")
-        print(f"Views:     {details.views}")
+        print(
+            f"Views:     {details.views:,}"
+            if details.views is not None
+            else "Views:     n/a"
+        )
         print(f"Length:    {details.length_seconds}s")
-        print(f"Published: {details.published}")
+        print(f"Published: {details.published_at}")
         print(f"Category:  {details.category}")
         print(f"Live:      {details.is_live}")
         print(f"Keywords:  {', '.join(details.keywords[:5])}")

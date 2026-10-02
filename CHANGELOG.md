@@ -5,6 +5,45 @@ All notable changes to **ytscrape** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] — Unreleased
+
+### Added
+
+- Reliability: `RetryPolicy` (exponential backoff, jitter, `Retry-After`),
+  `RateLimiter` / `min_interval`, `ContextCache` with TTL and a global
+  `DEFAULT_CONTEXT_CACHE` keyed by `(language, region)`. New client kwargs
+  `retry`, `rate_limiter`, `min_interval`, `context_cache`.
+- Exceptions: `YtScrapeError` base (alias `YtScraperError`), `RateLimited`,
+  `BotDetected` (alias `CaptchaRequired`), `ConsentRequired`,
+  `VideoUnavailable`, `AgeRestricted`; `RequestError.status_code` / `.url`.
+- Debug logging on the `ytscrape` logger (requests, retries, timings).
+- `YouTube.channel_videos()` / `AsyncYouTube.channel_videos()` returning lazy
+  `ChannelVideos` / `AsyncChannelVideos`.
+- Navigation helpers: `Video.details()/comments()/channel_details()`,
+  `VideoDetails.comments()/channel_details()`, `Channel.details()/videos()`,
+  `ChannelDetails.videos()`; `UnboundModelError` for unbound models.
+- `Thumbnail(url, width, height)` and `thumbnails` tuples on all models.
+- `VideoDetails.published_at` / `uploaded_at` datetimes; `Video.published_at`.
+- Parse helpers `parse_count`, `parse_relative_time`, `parse_date`.
+- CI: pytest matrix 3.10–3.14 with coverage (Codecov) and mypy, nightly
+  live tests, Dependabot; publishing requires passing tests.
+- Docs: reliability, models & navigation, channel videos, recipes, FAQ,
+  migration guide.
+
+### Changed (breaking)
+
+- `Video.views` is `int | None` (raw text in `views_text`).
+- `Video.published` removed → `published_text` + `published_at`.
+- `Channel.subscribers` / `video_count`, `Playlist.video_count`,
+  `ChannelDetails.subscribers` / `video_count` / `view_count` are
+  `int | None` with `*_text` counterparts.
+- `video()` raises `VideoUnavailable` / `AgeRestricted` / `BotDetected`.
+- Exports serialise datetimes as ISO 8601 and thumbnails as lists of dicts.
+
+### Fixed
+
+- Examples updated for numeric counts.
+
 ## [1.0.1] - 2026-08-19
 
 ### Added

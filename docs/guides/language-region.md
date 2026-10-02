@@ -1,3 +1,7 @@
+---
+description: "Configure ytscrape's interface language and content region with ISO codes to receive localised titles, descriptions, and metadata from YouTube."
+---
+
 # Localise YouTube results by language and region in ytscrape
 
 > Configure ytscrape's interface language and content region with ISO codes to receive localised titles, descriptions, and metadata from YouTube.

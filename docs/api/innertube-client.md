@@ -1,3 +1,7 @@
+---
+description: "Complete reference for InnerTubeClient — the low-level HTTP layer that drives all InnerTube API calls and session management in ytscrape."
+---
+
 # InnerTubeClient — ytscrape Low-Level HTTP Client Reference
 
 > Complete reference for InnerTubeClient — the low-level HTTP layer that drives all InnerTube API calls and session management in ytscrape.

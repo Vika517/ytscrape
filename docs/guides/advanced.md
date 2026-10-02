@@ -1,3 +1,7 @@
+---
+description: "Inject a custom requests.Session into InnerTubeClient to configure proxies, automatic retries, timeouts, and testable fake HTTP backends."
+---
+
 # Configure proxies, retries, and sessions in ytscrape
 
 > Inject a custom requests.Session into InnerTubeClient to configure proxies, automatic retries, timeouts, and testable fake HTTP backends.

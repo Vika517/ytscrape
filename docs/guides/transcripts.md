@@ -1,3 +1,7 @@
+---
+description: "Download timed caption snippets for any YouTube video, list available language tracks, and translate them server-side with ytscrape."
+---
+
 # Fetch YouTube video transcripts and captions with ytscrape
 
 > Download timed caption snippets for any YouTube video, list available language tracks, and translate them server-side with ytscrape.

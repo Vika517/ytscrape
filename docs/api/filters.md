@@ -1,3 +1,7 @@
+---
+description: "Reference for the SearchFilter and CommentSort enums that control what result types ytscrape searches for and how comments are ordered and collected."
+---
+
 # SearchFilter and CommentSort enums — ytscrape reference
 
 > Reference for the SearchFilter and CommentSort enums that control what result types ytscrape searches for and how comments are ordered and collected.

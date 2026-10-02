@@ -1,3 +1,7 @@
+---
+description: "Retrieve rich metadata for any YouTube video — title, description, view count, duration, keywords, and more — using a video id or URL."
+---
+
 # Fetch Video Metadata with YouTube.video() in ytscrape
 
 > Retrieve rich metadata for any YouTube video — title, description, view count, duration, keywords, and more — using a video id or URL.
@@ -43,7 +47,7 @@ with YouTube() as yt:
     print(f"Channel:   {details.channel}")
     print(f"Views:     {details.views}")
     print(f"Length:    {details.length_seconds}s")
-    print(f"Published: {details.published}")
+    print(f"Published: {details.published_at}")
     print(f"Category:  {details.category}")
     print(f"Live:      {details.is_live}")
     print(f"Keywords:  {', '.join(details.keywords[:5])}")
@@ -78,6 +82,9 @@ with YouTube() as yt:
 | `is_live`              | `bool`              | `True` if the video is a live stream or live content                  |
 | `thumbnail`            | `str \| None`       | URL of the highest-resolution available thumbnail                     |
 | `published`            | `str \| None`       | ISO publish date from player microformat (e.g. `2009-10-25`)          |
+| `published_at`         | `datetime \| None`  | Parsed publish datetime                                               |
+| `uploaded_at`          | `datetime \| None`  | Parsed upload datetime                                                |
+| `thumbnails`           | `tuple[Thumbnail, ...]` | All thumbnail sizes                                               |
 | `upload_date`          | `str \| None`       | ISO upload date                                                       |
 | `category`             | `str \| None`       | YouTube category (e.g. `Music`)                                       |
 | `owner_profile_url`    | `str \| None`       | Channel profile / vanity URL                                          |

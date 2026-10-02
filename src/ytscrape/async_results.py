@@ -11,9 +11,9 @@ from typing import Any
 
 from . import parsing
 from .export import AsyncExportable
-from .models import Channel, Comment, Playlist, Video
+from .models import Channel, Comment, Playlist, Video, bind
 
-__all__ = ["AsyncSearchResults", "AsyncCommentThread"]
+__all__ = ["AsyncChannelVideos", "AsyncCommentThread", "AsyncSearchResults"]
 
 SearchItem = Video | Channel | Playlist
 
@@ -30,20 +30,24 @@ class AsyncSearchResults(AsyncExportable):
         first_page: dict[str, Any],
         *,
         max_results: int | None = None,
+        youtube: Any = None,
     ) -> None:
         self._client = client
+        self._youtube = youtube
         self._continuation: str | None = parsing.find_continuation(first_page)
         self._max_results = max_results
         self._buffer: list[SearchItem] = self._extract_items(first_page)
 
-    @staticmethod
-    def _extract_items(page: dict[str, Any]) -> list[SearchItem]:
+    def _extract_items(self, page: dict[str, Any]) -> list[SearchItem]:
         items: list[SearchItem] = []
         for key, renderer in parsing.iter_renderers(page):
             item = parsing.parse_item(key, renderer)
             if item is not None:
-                items.append(item)
+                items.append(bind(item, self._youtube))
         return items
+
+    async def _fetch_page(self, continuation: str) -> dict[str, Any]:
+        return await self._client.search(continuation=continuation)
 
     @property
     def has_more(self) -> bool:
@@ -54,7 +58,7 @@ class AsyncSearchResults(AsyncExportable):
         """Fetch and buffer the next page, returning the newly added items."""
         if self._continuation is None:
             return []
-        page = await self._client.search(continuation=self._continuation)
+        page = await self._fetch_page(self._continuation)
         self._continuation = parsing.find_continuation(page)
         new_items = self._extract_items(page)
         self._buffer.extend(new_items)
@@ -76,6 +80,29 @@ class AsyncSearchResults(AsyncExportable):
                 await self.fetch_next_page()
             if index >= len(self._buffer):
                 return
+
+
+class AsyncChannelVideos(AsyncSearchResults):
+    """Async paginated uploads of a channel (its *Videos* tab)."""
+
+    def __init__(
+        self,
+        client: Any,
+        channel_id: str,
+        first_page: dict[str, Any],
+        *,
+        max_results: int | None = None,
+        youtube: Any = None,
+    ) -> None:
+        self._channel_id = channel_id
+        super().__init__(client, first_page, max_results=max_results, youtube=youtube)
+
+    def _extract_items(self, page: dict[str, Any]) -> list[SearchItem]:
+        items = parsing.parse_channel_videos(page, channel_id=self._channel_id)
+        return [bind(item, self._youtube) for item in items]
+
+    async def _fetch_page(self, continuation: str) -> dict[str, Any]:
+        return await self._client.browse(self._channel_id, continuation=continuation)
 
 
 class AsyncCommentThread(AsyncExportable):

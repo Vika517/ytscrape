@@ -23,11 +23,11 @@ class TestLanguage:
 
     @pytest.mark.parametrize("code", ["", "   ", "eng", "e"])
     def test_invalid_length_or_empty_raises(self, code: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)language"):
             Language(code)
 
     def test_non_string_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)language"):
             Language(123)  # type: ignore[arg-type]
 
     def test_of_passes_through_existing_instance(self) -> None:
@@ -60,7 +60,7 @@ class TestCountry:
 
     @pytest.mark.parametrize("code", ["", "   ", "USA", "U"])
     def test_invalid_length_or_empty_raises(self, code: str) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)country"):
             Country(code)
 
     def test_of_passes_through_existing_instance(self) -> None:
@@ -105,5 +105,5 @@ class TestLocale:
         assert locale.accept_language == "uk-UA,uk;q=0.9"
 
     def test_invalid_code_propagates(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"(?i)language"):
             Locale(language="zz", country="US")

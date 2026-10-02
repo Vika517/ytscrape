@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ["SearchFilter", "CommentSort"]
+__all__ = ["CommentSort", "SearchFilter"]
 
 
 class SearchFilter(str, Enum):

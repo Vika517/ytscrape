@@ -13,9 +13,9 @@ from typing import Any
 
 from . import parsing
 from .export import Exportable
-from .models import Channel, Comment, Playlist, Video
+from .models import Channel, Comment, Playlist, Video, bind
 
-__all__ = ["SearchResults", "CommentThread"]
+__all__ = ["ChannelVideos", "CommentThread", "SearchResults"]
 
 SearchItem = Video | Channel | Playlist
 
@@ -44,20 +44,24 @@ class SearchResults(Exportable):
         first_page: dict[str, Any],
         *,
         max_results: int | None = None,
+        youtube: Any = None,
     ) -> None:
         self._client = client
+        self._youtube = youtube
         self._continuation: str | None = parsing.find_continuation(first_page)
         self._max_results = max_results
         self._buffer: list[SearchItem] = self._extract_items(first_page)
 
-    @staticmethod
-    def _extract_items(page: dict[str, Any]) -> list[SearchItem]:
+    def _extract_items(self, page: dict[str, Any]) -> list[SearchItem]:
         items: list[SearchItem] = []
         for key, renderer in parsing.iter_renderers(page):
             item = parsing.parse_item(key, renderer)
             if item is not None:
-                items.append(item)
+                items.append(bind(item, self._youtube))
         return items
+
+    def _fetch_page(self, continuation: str) -> dict[str, Any]:
+        return self._client.search(continuation=continuation)
 
     @property
     def has_more(self) -> bool:
@@ -71,7 +75,7 @@ class SearchResults(Exportable):
         """
         if self._continuation is None:
             return []
-        page = self._client.search(continuation=self._continuation)
+        page = self._fetch_page(self._continuation)
         self._continuation = parsing.find_continuation(page)
         new_items = self._extract_items(page)
         self._buffer.extend(new_items)
@@ -95,6 +99,34 @@ class SearchResults(Exportable):
                 self.fetch_next_page()
             if index >= len(self._buffer):
                 return
+
+
+class ChannelVideos(SearchResults):
+    """Lazy, paginated uploads of a channel (its *Videos* tab).
+
+    Returned by :meth:`ytscrape.YouTube.channel_videos`. Pages through the
+    ``browse`` endpoint using the tab's continuation tokens. Only classic
+    ``videoRenderer`` items are parsed; Shorts and live tabs are not included.
+    """
+
+    def __init__(
+        self,
+        client: Any,
+        channel_id: str,
+        first_page: dict[str, Any],
+        *,
+        max_results: int | None = None,
+        youtube: Any = None,
+    ) -> None:
+        self._channel_id = channel_id
+        super().__init__(client, first_page, max_results=max_results, youtube=youtube)
+
+    def _extract_items(self, page: dict[str, Any]) -> list[SearchItem]:
+        items = parsing.parse_channel_videos(page, channel_id=self._channel_id)
+        return [bind(item, self._youtube) for item in items]
+
+    def _fetch_page(self, continuation: str) -> dict[str, Any]:
+        return self._client.browse(self._channel_id, continuation=continuation)
 
 
 class CommentThread(Exportable):

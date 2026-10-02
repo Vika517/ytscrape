@@ -81,7 +81,8 @@ def test_render_table_boxes_and_truncates() -> None:
         enabled=False,
         max_width=14,
     )
-    assert "┌" in table and "┐" in table
+    assert "┌" in table
+    assert "┐" in table
     assert "Title" in table
     assert "…" in table
 
@@ -118,8 +119,9 @@ def test_search_rows_from_video() -> None:
         title="A title",
         channel="Chan",
         duration="3:14",
-        views="1K views",
-        published="1 day ago",
+        views=1000,
+        views_text="1K views",
+        published_text="1 day ago",
     )
     headers, rows = search_rows([video])
     assert headers[0] == "#"
@@ -137,7 +139,8 @@ def test_search_rows_omit_published_for_channels() -> None:
         channel_id="UC123",
         title="A channel",
         handle="@a",
-        subscribers="1M subscribers",
+        subscribers=1_000_000,
+        subscribers_text="1M subscribers",
     )
     headers, rows = search_rows([channel])
     assert "Published" not in headers

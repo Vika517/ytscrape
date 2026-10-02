@@ -37,6 +37,9 @@ python examples/10_async_concurrency.py
 | [`08_channel_details.py`](08_channel_details.py) | Fetch `ChannelDetails` by id, handle or URL (sync + async). |
 | [`09_transcript.py`](09_transcript.py) | List caption tracks and fetch a transcript (sync + async). |
 | [`10_async_concurrency.py`](10_async_concurrency.py) | Parallel `asyncio.gather` with `max_concurrency` (async only). |
+| [`11_channel_videos.py`](11_channel_videos.py) | List a channel's uploads (Videos tab) lazily. |
+| [`12_retry_rate_limit.py`](12_retry_rate_limit.py) | Retries, client-side rate limiting, debug logging. |
+| [`13_navigation_helpers.py`](13_navigation_helpers.py) | Navigation helpers between models. |
 
 ## Pattern used in each file
 

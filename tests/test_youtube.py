@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from ytscrape import (
+    Channel,
     ChannelDetails,
     CommentSort,
     ParseError,
@@ -363,3 +364,74 @@ class TestYouTubeLifecycle:
         with YouTube(client=client) as yt:
             assert yt.client is client
         assert client.closed is True
+
+
+class TestNavigationHelpers:
+    def test_search_items_are_bound(self) -> None:
+        class IdClient(FakeClient):
+            def search(self, query=None, *, params=None, continuation=None):
+                return {"contents": [{"videoRenderer": {"videoId": "dQw4w9WgXcQ"}}]}
+
+        yt = YouTube(client=IdClient())  # type: ignore[arg-type]
+        video = next(iter(yt.search("q")))
+        details = video.details()
+        assert isinstance(details, VideoDetails)
+        assert details.video_id == "dQw4w9WgXcQ"
+        assert details.comments(max_results=1) is not None
+        assert "_yt" not in video.to_dict()
+
+    def test_channel_videos_paginates(self) -> None:
+        class VideosClient(FakeClient):
+            def browse(self, browse_id, *, params=None, continuation=None):
+                self.browse_calls.append(
+                    {
+                        "browse_id": browse_id,
+                        "params": params,
+                        "continuation": continuation,
+                    }
+                )
+                if continuation is None:
+                    return {
+                        "contents": [
+                            {
+                                "richItemRenderer": {
+                                    "content": {
+                                        "videoRenderer": {
+                                            "videoId": "aaaaaaaaaaa",
+                                            "viewCountText": {
+                                                "simpleText": "1.5K views"
+                                            },
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "continuationItemRenderer": {
+                                    "continuationEndpoint": {
+                                        "continuationCommand": {"token": "P2"}
+                                    }
+                                }
+                            },
+                        ]
+                    }
+                return {
+                    "onResponseReceivedActions": [
+                        {
+                            "appendContinuationItemsAction": {
+                                "continuationItems": [
+                                    {"videoRenderer": {"videoId": "bbbbbbbbbbb"}}
+                                ]
+                            }
+                        }
+                    ]
+                }
+
+        client = VideosClient()
+        yt = YouTube(client=client)  # type: ignore[arg-type]
+        channel = Channel(channel_id="UCuAXFkgsw1L7xaCfnd5JJOw").bind(yt)
+        videos = list(channel.videos())
+        assert [v.video_id for v in videos] == ["aaaaaaaaaaa", "bbbbbbbbbbb"]
+        assert videos[0].views == 1500
+        assert videos[0].channel_id == "UCuAXFkgsw1L7xaCfnd5JJOw"
+        assert client.browse_calls[-1]["continuation"] == "P2"
+        assert videos[1].details().video_id == "bbbbbbbbbbb"

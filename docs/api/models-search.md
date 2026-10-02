@@ -1,3 +1,7 @@
+---
+description: "Reference for the Video, Channel, and Playlist frozen dataclasses and the SearchResults paginated iterator returned by YouTube.search()."
+---
+
 # Search result models: Video, Channel, and Playlist
 
 > Reference for the Video, Channel, and Playlist frozen dataclasses and the SearchResults paginated iterator returned by YouTube.search().
@@ -33,15 +37,23 @@ Represents a single video result from a search query.
 :   Human-formatted duration string as shown on YouTube (e.g. `"10:23"` or `"1:02:47"`). `None` for live streams or when unavailable.
 
 
-**`views`** (`str | None`)
+**`views`** (`int | None`)
 
-:   Formatted view count exactly as YouTube renders it (e.g. `"1.2M views"` or `"42,318 views"`). Use this for display; parse it manually if you need a number.
+:   View count as an integer (e.g. `1200000`), parsed from the rendered text. The original wording is in **`views_text`** (`str | None`).
 
 
-**`published`** (`str | None`)
+**`published_text`** (`str | None`)
 
-:   Relative publication date as shown in search results (e.g. `"3 days ago"`, `"2 years ago"`). `None` for live streams.
+:   Relative publication date as shown in search results (e.g. `"3 days ago"`, `"2 years ago"`). `None` for live streams. *(Renamed from `published` in 2.0.)*
 
+**`published_at`** (`datetime | None`)
+
+:   Approximate UTC datetime computed from English `published_text`.
+
+
+**`thumbnails`** (`tuple[Thumbnail, ...]`)
+
+:   All available sizes as `Thumbnail(url, width, height)`.
 
 **`thumbnail`** (`str | None`)
 
@@ -79,15 +91,19 @@ Represents a single channel result from a search query.
 :   The channel's `@handle` if present in the search result (e.g. `"@RickAstleyYT"`).
 
 
-**`subscribers`** (`str | None`)
+**`subscribers`** (`int | None`)
 
-:   Formatted subscriber count as YouTube renders it (e.g. `"1.2M subscribers"`).
+:   Subscriber count as an integer. The original wording is in **`subscribers_text`**.
 
 
-**`video_count`** (`str | None`)
+**`video_count`** (`int | None`)
 
 :   Formatted video count as YouTube renders it (e.g. `"142 videos"`).
 
+
+**`thumbnails`** (`tuple[Thumbnail, ...]`)
+
+:   All available sizes as `Thumbnail(url, width, height)`.
 
 **`thumbnail`** (`str | None`)
 
@@ -120,10 +136,14 @@ Represents a single playlist result from a search query.
 :   Display name of the channel that owns the playlist.
 
 
-**`video_count`** (`str | None`)
+**`video_count`** (`int | None`)
 
 :   The number of videos in the playlist as a string (e.g. `"42"`).
 
+
+**`thumbnails`** (`tuple[Thumbnail, ...]`)
+
+:   All available sizes as `Thumbnail(url, width, height)`.
 
 **`thumbnail`** (`str | None`)
 
@@ -198,7 +218,7 @@ for item in yt.search("python tutorial"):
     if isinstance(item, Video):
         print(f"Video : {item.title}  [{item.duration}]  {item.url}")
     elif isinstance(item, Channel):
-        print(f"Channel: {item.title}  ({item.subscribers})")
+        print(f"Channel: {item.title}  ({item.subscribers_text})")
     elif isinstance(item, Playlist):
         print(f"Playlist: {item.title}  — {item.video_count} videos")
 ```

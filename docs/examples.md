@@ -1,3 +1,7 @@
+---
+description: "Copy-paste friendly scripts under [`examples/`](https://github.com/vsmutok/ytscrape/tree/main/examples) — each feature ships both `YouTube` and `AsyncYouTube` variants."
+---
+
 # Runnable examples (sync and async)
 
 > Copy-paste friendly scripts under [`examples/`](https://github.com/vsmutok/ytscrape/tree/main/examples) — each feature ships both `YouTube` and `AsyncYouTube` variants.
@@ -46,6 +50,9 @@ python examples/10_async_concurrency.py
 | [`08_channel_details.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/08_channel_details.py) | `channel()` metadata |
 | [`09_transcript.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/09_transcript.py) | Caption tracks and transcripts |
 | [`10_async_concurrency.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/10_async_concurrency.py) | `asyncio.gather` + `max_concurrency` (async only) |
+| [`11_channel_videos.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/11_channel_videos.py) | List a channel's uploads with `channel_videos()` |
+| [`12_retry_rate_limit.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/12_retry_rate_limit.py) | `RetryPolicy`, `min_interval`, debug logging, exceptions |
+| [`13_navigation_helpers.py`](https://github.com/vsmutok/ytscrape/blob/main/examples/13_navigation_helpers.py) | `video.details()`, `.comments()`, `.channel_details()`, `channel.videos()` |
 
 ## Sync ↔ async mapping
 

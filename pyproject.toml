@@ -4,15 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ytscrape"
-version = "1.0.1"
-description = "YouTube scraper for Python — search videos, channels and playlists and fetch video metadata via the InnerTube API, no API key required."
+version = "2.0.0"
+description = "Fast YouTube scraper for Python — scrape search results, video and channel metadata, comments, replies and transcripts via the InnerTube API. No API key, no quota, no browser."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 authors = [
-    { name = "Vasyl Smutok" },
-    { email = "vasyl.smutok@gmail.com" },
+    { name = "Vasyl Smutok", email = "vasyl.smutok@gmail.com" },
 ]
 
 keywords = [
@@ -26,12 +25,18 @@ keywords = [
     "scraping",
     "video",
     "search",
+    "comments",
+    "youtube-comments",
+    "transcript",
+    "youtube-transcript",
+    "subtitles",
+    "async",
     "free",
     "no-api-key",
 ]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -66,6 +71,7 @@ Homepage = "https://github.com/vsmutok/ytscrape"
 Repository = "https://github.com/vsmutok/ytscrape"
 Documentation = "https://vsmutok.github.io/ytscrape/"
 Issues = "https://github.com/vsmutok/ytscrape/issues"
+Changelog = "https://github.com/vsmutok/ytscrape/blob/main/CHANGELOG.md"
 
 [project.scripts]
 ytscrape = "ytscrape.__main__:main"
@@ -95,7 +101,18 @@ select = [
     "I",   # isort
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+    "PT",  # flake8-pytest-style
+    "C4",  # flake8-comprehensions
+    "N",   # pep8-naming
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Public exception names (BotDetected, RateLimited, ...) are part of the API.
+"src/ytscrape/exceptions.py" = ["N818"]
+# Example scripts favour readable one-line f-strings.
+"examples/*.py" = ["E501"]
 
 [tool.bandit]
 exclude_dirs = [
@@ -105,11 +122,36 @@ exclude_dirs = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "network: tests that hit the real YouTube (deselect with -m 'not network')",
+]
+
+[tool.coverage.run]
+source = ["ytscrape"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/ytscrape"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["pycountry.*", "defusedxml.*"]
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [
     "bandit[toml]>=1.9.4",
     "mkdocs-material>=9.7.7",
+    "mypy>=1.13",
+    "pytest-cov>=6.0",
+    "types-requests>=2.32",
     "pre-commit>=4.3.0",
     "pytest>=9.1.1",
     "ruff>=0.14.5",

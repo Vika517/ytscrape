@@ -1,3 +1,7 @@
+---
+description: "Install ytscrape and write your first Python script to search videos, fetch video details, and collect comments — all without a YouTube API key."
+---
+
 # Get Started with ytscrape: Search, Metadata and Comments
 
 > Install ytscrape and write your first Python script to search videos, fetch video details, and collect comments — all without a YouTube API key.
@@ -43,11 +47,11 @@ with YouTube() as yt:
     )
     for video in results:
         print(f"{video.title}  ({video.duration})")
-        print(f"  by {video.channel} — {video.views}")
+        print(f"  by {video.channel} — {video.views_text}")
         print(f"  {video.url}")
 ```
 
-Each `video` in the loop is a typed `Video` dataclass. Its most useful fields are `video_id`, `title`, `channel`, `channel_id`, `duration`, `views`, `published`, `thumbnail`, and `url`.
+Each `video` in the loop is a typed `Video` dataclass. Its most useful fields are `video_id`, `title`, `channel`, `channel_id`, `duration`, `views` (int), `views_text`, `published_text`, `published_at`, `thumbnails`, and `url`. Bound models also offer navigation helpers like `video.details()` and `video.comments()` — see [Models & navigation](guides/models.md).
 
 ### 3. Fetch video details
 

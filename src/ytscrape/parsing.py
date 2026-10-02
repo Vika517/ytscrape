@@ -8,19 +8,22 @@ the package can stay declarative.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import replace
 from typing import Any
 
 from .models import Channel, Comment, Playlist, Video
 
 __all__ = [
-    "find_continuation",
-    "iter_renderers",
-    "parse_item",
+    "CHANNEL_VIDEOS_PARAMS",
     "find_comments_continuation",
     "find_comments_sort_continuation",
+    "find_continuation",
     "find_next_comments_continuation",
     "find_reply_continuations",
+    "iter_renderers",
+    "parse_channel_videos",
     "parse_comments_page",
+    "parse_item",
 ]
 
 # Maps a renderer key to the model responsible for parsing it.
@@ -92,6 +95,91 @@ def parse_item(renderer_key: str, renderer: dict[str, Any]):
     if factory is None:
         return None
     return factory(renderer)
+
+
+# ``params`` value that selects a channel's "Videos" tab on ``browse``.
+CHANNEL_VIDEOS_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
+
+_CHANNEL_VIDEO_KEYS = ("videoRenderer", "gridVideoRenderer")
+
+
+def _lockup_to_renderer(lockup: dict[str, Any]) -> dict[str, Any] | None:
+    """Convert a video ``lockupViewModel`` into a ``videoRenderer``-like dict."""
+    video_id = lockup.get("contentId")
+    if not isinstance(video_id, str) or lockup.get("contentType") not in (
+        None,
+        "LOCKUP_CONTENT_TYPE_VIDEO",
+    ):
+        return None
+    meta = (lockup.get("metadata") or {}).get("lockupMetadataViewModel") or {}
+    title = (meta.get("title") or {}).get("content") or ""
+    parts: list[str] = []
+    rows = ((meta.get("metadata") or {}).get("contentMetadataViewModel") or {}).get(
+        "metadataRows"
+    ) or []
+    for row in rows:
+        for part in row.get("metadataParts") or []:
+            text = (part.get("text") or {}).get("content")
+            if isinstance(text, str):
+                parts.append(text)
+    views = next((p for p in parts if "view" in p.lower()), "")
+    published = next((p for p in parts if "ago" in p.lower()), "")
+    image = (lockup.get("contentImage") or {}).get("thumbnailViewModel") or {}
+    sources = (image.get("image") or {}).get("sources") or []
+    length = ""
+    for overlay in image.get("overlays") or []:
+        bottom = overlay.get("thumbnailBottomOverlayViewModel") or {}
+        for badge in bottom.get("badges") or []:
+            text = (badge.get("thumbnailBadgeViewModel") or {}).get("text")
+            if isinstance(text, str) and ":" in text:
+                length = text
+    renderer: dict[str, Any] = {
+        "videoId": video_id,
+        "title": {"runs": [{"text": title}]},
+        "thumbnail": {"thumbnails": sources},
+    }
+    if views:
+        renderer["viewCountText"] = {"simpleText": views}
+    if published:
+        renderer["publishedTimeText"] = {"simpleText": published}
+    if length:
+        renderer["lengthText"] = {"simpleText": length}
+    return renderer
+
+
+def parse_channel_videos(
+    response: Any, *, channel_id: str | None = None
+) -> list[Video]:
+    """Extract the videos of a channel Videos-tab ``browse`` page.
+
+    Channel tab renderers omit the owner, so ``channel_id`` (when given) is
+    filled in on every video that lacks one.
+    """
+    videos: list[Video] = []
+    seen: set[str] = set()
+
+    def _walk(node: Any) -> None:
+        if isinstance(node, dict):
+            candidates = [node.get(key) for key in _CHANNEL_VIDEO_KEYS]
+            lockup = node.get("lockupViewModel")
+            if isinstance(lockup, dict):
+                candidates.append(_lockup_to_renderer(lockup))
+            for renderer in candidates:
+                if isinstance(renderer, dict) and renderer.get("videoId"):
+                    video = Video.from_renderer(renderer)
+                    if video.video_id not in seen:
+                        seen.add(video.video_id)
+                        if channel_id and not video.channel_id:
+                            video = replace(video, channel_id=channel_id)
+                        videos.append(video)
+            for value in node.values():
+                _walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item)
+
+    _walk(response)
+    return videos
 
 
 # --- comments ----------------------------------------------------------------
@@ -412,7 +500,11 @@ def parse_comments_page(
                 inner = view_model.get("commentViewModel", view_model)
                 comment_id = inner.get("commentId") if isinstance(inner, dict) else None
                 payload = payloads.get(comment_id) if comment_id else None
-                if payload is not None and comment_id not in seen:
+                if (
+                    isinstance(comment_id, str)
+                    and payload is not None
+                    and comment_id not in seen
+                ):
                     seen.add(comment_id)
                     comments.append(
                         Comment.from_entity_payload(

@@ -1,3 +1,7 @@
+---
+description: "Reference for the Comment frozen dataclass and the CommentThread paginated iterator returned by YouTube.comments(), with full reply thread support."
+---
+
 # Comment model and CommentThread paginated iterator
 
 > Reference for the Comment frozen dataclass and the CommentThread paginated iterator returned by YouTube.comments(), with full reply thread support.
