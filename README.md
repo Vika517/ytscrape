@@ -17,7 +17,6 @@ no API key, no quota, no Selenium, no browser.**
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/vsmutok/ytscrape?style=flat)](https://github.com/vsmutok/ytscrape/stargazers)
 [![Docs](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://vsmutok.github.io/ytscrape/)
-[![Typed](https://img.shields.io/badge/typing-py.typed-informational.svg)](https://peps.python.org/pep-0561/)
 
 <p align="center">
   <a href="#installation">Installation</a> •
